@@ -11,10 +11,10 @@ INSTRUMENTR_DEFINE_API()
 extern "C" {
 
 static const R_CallMethodDef callMethods[] = {
-    {"lazr_tracer_create", (DL_FUNC) &r_lazr_tracer_create, 0},
+    {"argtracer_create", (DL_FUNC) &r_argtracer_create, 0},
     {NULL, NULL, 0}};
 
-void R_init_lazr(DllInfo* dll) {
+void R_init_argtracer(DllInfo* dll) {
     R_registerRoutines(dll, NULL, callMethods, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 

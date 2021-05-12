@@ -3,7 +3,7 @@
 #include "callbacks.h"
 #include <instrumentr/instrumentr.h>
 
-SEXP r_lazr_tracer_create() {
+SEXP r_argtracer_create() {
     instrumentr_tracer_t tracer = instrumentr_tracer_create();
 
     instrumentr_callback_t callback;

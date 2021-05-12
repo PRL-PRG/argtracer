@@ -1,10 +1,10 @@
-#ifndef LAZR_TRACER_H
-#define LAZR_TRACER_H
+#ifndef ARGTRACER_H
+#define ARGTRACER_H
 
 #include "Rincludes.h"
 
 extern "C" {
-SEXP r_lazr_tracer_create();
+SEXP r_argtracer_create();
 }
 
-#endif /* LAZR_TRACER_H */
+#endif /* ARGTRACER_H */

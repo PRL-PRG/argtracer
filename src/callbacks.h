@@ -1,5 +1,5 @@
-#ifndef LAZR_CALLBACKS_H
-#define LAZR_CALLBACKS_H
+#ifndef ARGTRACER_CALLBACKS_H
+#define ARGTRACER_CALLBACKS_H
 
 #include <instrumentr/instrumentr.h>
 
@@ -113,4 +113,4 @@ void trace_error(instrumentr_tracer_t tracer,
                  instrumentr_application_t application,
                  instrumentr_value_t call_expr);
 
-#endif /* LAZR_CALLBACKS_H  */
+#endif /* ARGTRACER_CALLBACKS_H  */

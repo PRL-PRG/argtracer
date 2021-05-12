@@ -1,5 +1,5 @@
-#ifndef LAZR_ENVIRONMENT_H
-#define LAZR_ENVIRONMENT_H
+#ifndef ARGTRACER_ENVIRONMENT_H
+#define ARGTRACER_ENVIRONMENT_H
 
 #include <string>
 #include "utilities.h"
@@ -62,4 +62,5 @@ class Environment {
     int call_id_;
 };
 
-#endif /* LAZR_ENVIRONMENT_H */
+#endif /* ARGTRACER_ENVIRONMENT_H */
+

@@ -1,5 +1,5 @@
-#ifndef LAZR_CALL_REFLECTION_TABLE_H
-#define LAZR_CALL_REFLECTION_TABLE_H
+#ifndef ARGTRACER_CALL_REFLECTION_TABLE_H
+#define ARGTRACER_CALL_REFLECTION_TABLE_H
 
 #include <vector>
 #include <string>
@@ -97,4 +97,4 @@ class CallReflectionTable {
     std::vector<int> depth_;
 };
 
-#endif /* LAZR_CALL_REFLECTION_TABLE_H */
+#endif /* ARGTRACER_CALL_REFLECTION_TABLE_H */

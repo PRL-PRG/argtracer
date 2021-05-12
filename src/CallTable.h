@@ -1,5 +1,5 @@
-#ifndef LAZR_CALL_TABLE_H
-#define LAZR_CALL_TABLE_H
+#ifndef ARGTRACER_CALL_TABLE_H
+#define ARGTRACER_CALL_TABLE_H
 
 #include "Call.h"
 #include <unordered_map>
@@ -113,4 +113,4 @@ class CallTable {
     std::unordered_map<int, Call*> table_;
 };
 
-#endif /* LAZR_CALL_TABLE_H */
+#endif /* ARGTRACER_CALL_TABLE_H */

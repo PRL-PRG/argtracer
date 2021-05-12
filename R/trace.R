@@ -1,16 +1,16 @@
 
 #' @export
 #' @importFrom instrumentr trace_code get_exec_stats
-trace_expr <- function(code,
+trace_args <- function(code,
                        environment = parent.frame(),
                        quote = TRUE) {
-    tracer <- .Call(C_lazr_tracer_create)
+    argtracer <- .Call(C_argtracer_create)
 
     if(quote) {
         code <- substitute(code)
     }
 
-    invisible(trace_code(tracer, code, environment = environment, quote = FALSE))
+    invisible(trace_code(argtracer, code, environment = environment, quote = FALSE))
 }
 
 #' @export

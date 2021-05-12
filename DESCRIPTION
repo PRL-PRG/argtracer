@@ -1,21 +1,17 @@
-Package: lazr
-Title: Strictness Analysis for R
+Package: argtracer
+Title: A tool that traces function call arguments
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "Aviral",
-           family = "Goel",
+    person(given = "First",
+           family = "Last",
            role = c("aut", "cre"),
-           email = "aviral@aviral.io",
-           comment = c(ORCID = "0000-0002-0814-5015"))
-Description: This package generates laziness signatures for R functions
+           email = "first.last@example.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: This package generates database of meaningful values from R function calls
              from dynamically generated traces.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports:
-    instrumentr
-Remotes:
-    PRL-PRG/instrumentr
 LinkingTo:
     instrumentr
 Roxygen: list(markdown = TRUE)

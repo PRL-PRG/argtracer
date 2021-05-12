@@ -1,5 +1,5 @@
-#ifndef LAZR_FUNCTION_H
-#define LAZR_FUNCTION_H
+#ifndef ARGTRACER_FUNCTION_H
+#define ARGTRACER_FUNCTION_H
 
 #include <string>
 #include <vector>
@@ -112,4 +112,4 @@ class Function {
     std::string fun_def_;
 };
 
-#endif /* LAZR_FUNCTION_H */
+#endif /* ARGTRACER_FUNCTION_H */
