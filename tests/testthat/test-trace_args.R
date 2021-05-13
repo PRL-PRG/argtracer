@@ -3,9 +3,9 @@ test_that("trace my_add1", {
 
   r <- trace_args(code = {
     my_add <- function(x, y) {x + y}
-    my_add(1L, 1L)
+    my_add(1, 1)
   })
-  expect_equal(record::size_db(),  1)
+  expect_equal(record::size_db(),  2)
   record::close_db("test_db/db_my_add")
 })
 
@@ -16,7 +16,8 @@ test_that("trace my_add2", {
     my_add <- function(x, y) {x + y}
     my_add(2, 3)
   })
-  expect_equal(record::size_db(),  3)
+
+  expect_equal(record::size_db(), 5)
   record::close_db("test_db/db_my_add")
 })
 

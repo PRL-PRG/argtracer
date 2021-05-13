@@ -5,6 +5,8 @@
 #include <instrumentr/instrumentr.h>
 #include <vector>
 
+static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
+
 std::string get_sexp_type(SEXP r_value) {
     if (r_value == R_UnboundValue) {
         return LAZR_NA_STRING;
@@ -41,7 +43,6 @@ void process_arguments(ArgumentTable& argument_table,
 
         //TODO: add val to database 
         SEXP r_argval = instrumentr_value_get_sexp(argval);
-        static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
         p_add_val(r_argval);
 
         argument_table.insert(argval,
@@ -123,6 +124,10 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
         instrumentr_value_t value = instrumentr_call_get_result(call);
         instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
         result_type = instrumentr_value_type_get_name(val_type);
+        //TODO:
+        SEXP r_return_val = instrumentr_value_get_sexp(value);
+        p_add_val(r_return_val);
+
     }
 
     Call* call_data = call_table.lookup(call_id);
