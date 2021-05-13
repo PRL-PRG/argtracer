@@ -39,6 +39,11 @@ void process_arguments(ArgumentTable& argument_table,
         instrumentr_value_t argval =
             instrumentr_environment_lookup(call_env, nameval);
 
+        //TODO: add val to database 
+        SEXP r_argval = instrumentr_value_get_sexp(argval);
+        static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
+        p_add_val(r_argval);
+
         argument_table.insert(argval,
                               position,
                               argument_name,
