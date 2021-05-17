@@ -1,4 +1,4 @@
-R = ~R/R-dyntrace/bin/R
+R = ~/R/R-dyntrace/bin/R
 
 .PHONY: all build check document test
 
@@ -14,6 +14,7 @@ clean:
 	-rm -f argtracer*tar.gz
 	-rm -fr argtracer.Rcheck
 	-rm -rf src/*.o src/*.so
+	-rm -rf tests/testthat/test_db/*
 
 document:
 	$(R) -e 'devtools::document()'
