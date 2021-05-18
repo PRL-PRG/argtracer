@@ -27,6 +27,8 @@ void process_arguments(ArgumentTable& argument_table,
 
     int position = 0;
 
+    static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
+
     while (instrumentr_value_is_pairlist(formals)) {
         instrumentr_pairlist_t pairlist =
             instrumentr_value_as_pairlist(formals);
@@ -41,10 +43,9 @@ void process_arguments(ArgumentTable& argument_table,
         instrumentr_value_t argval =
             instrumentr_environment_lookup(call_env, nameval);
 
-        //TODO: add val to database 
+        // linking to record:
         SEXP r_argval = instrumentr_value_get_sexp(argval);
-        static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
-        p_add_val(r_argval);
+        // p_add_val(r_argval);
 
         argument_table.insert(argval,
                               position,
@@ -125,10 +126,10 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
         instrumentr_value_t value = instrumentr_call_get_result(call);
         instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
         result_type = instrumentr_value_type_get_name(val_type);
-        //TODO:
+        // linking to record:
         SEXP r_return_val = instrumentr_value_get_sexp(value);
         static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
-        p_add_val(r_return_val);
+        // p_add_val(r_return_val);
 
     }
 
