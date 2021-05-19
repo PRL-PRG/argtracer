@@ -30,7 +30,7 @@ void TracingState::finalize(instrumentr_state_t state) {
         PROTECT(tracing_state.get_environment_table().to_sexp());
     SEXP r_metaprogramming =
         PROTECT(tracing_state.get_metaprogramming_table().to_sexp());
-    SEXP r_effects = PROTECT(tracing_state.get_effects_table().to_sexp());
+    // SEXP r_effects = PROTECT(tracing_state.get_effects_table().to_sexp());
     SEXP r_arg_ref = PROTECT(tracing_state.get_arg_ref_tab().to_sexp());
     SEXP r_call_ref = PROTECT(tracing_state.get_call_ref_tab().to_sexp());
 
@@ -40,7 +40,7 @@ void TracingState::finalize(instrumentr_state_t state) {
     instrumentr_state_insert(state, "functions", r_functions, true);
     instrumentr_state_insert(state, "environments", r_environments, true);
     instrumentr_state_insert(state, "metaprogramming", r_metaprogramming, true);
-    instrumentr_state_insert(state, "effects", r_effects, true);
+    // instrumentr_state_insert(state, "effects", r_effects, true);
     instrumentr_state_insert(state, "arg_ref", r_arg_ref, true);
     instrumentr_state_insert(state, "call_ref", r_call_ref, true);
 

@@ -7,7 +7,7 @@
 #include "ArgumentTable.h"
 #include "FunctionTable.h"
 #include "MetaprogrammingTable.h"
-#include "EffectsTable.h"
+// #include "EffectsTable.h"
 #include "ArgumentReflectionTable.h"
 #include "CallReflectionTable.h"
 // #include "Backtrace.h"
@@ -58,13 +58,13 @@ class TracingState {
         return metaprogramming_table_;
     }
 
-    EffectsTable& get_effects_table() {
-        return effects_table_;
-    }
+    // EffectsTable& get_effects_table() {
+    //     return effects_table_;
+    // }
 
-    const EffectsTable& get_effects_table() const {
-        return effects_table_;
-    }
+    // const EffectsTable& get_effects_table() const {
+    //     return effects_table_;
+    // }
 
     ArgumentReflectionTable& get_arg_ref_tab() {
         return arg_ref_tab_;
@@ -102,7 +102,7 @@ class TracingState {
     ArgumentTable argument_table_;
     FunctionTable function_table_;
     MetaprogrammingTable metaprogramming_table_;
-    EffectsTable effects_table_;
+    // EffectsTable effects_table_;
     ArgumentReflectionTable arg_ref_tab_;
     CallReflectionTable call_ref_tab_;
     // Backtrace backtrace_;
