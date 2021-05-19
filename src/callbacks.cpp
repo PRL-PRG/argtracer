@@ -6,7 +6,6 @@
 #include <vector>
 
 
-
 std::string get_sexp_type(SEXP r_value) {
     if (r_value == R_UnboundValue) {
         return LAZR_NA_STRING;
@@ -27,7 +26,8 @@ void process_arguments(ArgumentTable& argument_table,
 
     int position = 0;
 
-    static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
+    // linking to record:
+    // static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
 
     while (instrumentr_value_is_pairlist(formals)) {
         instrumentr_pairlist_t pairlist =
@@ -43,8 +43,7 @@ void process_arguments(ArgumentTable& argument_table,
         instrumentr_value_t argval =
             instrumentr_environment_lookup(call_env, nameval);
 
-        // linking to record:
-        SEXP r_argval = instrumentr_value_get_sexp(argval);
+        // SEXP r_argval = instrumentr_value_get_sexp(argval);
         // p_add_val(r_argval);
 
         argument_table.insert(argval,
@@ -97,11 +96,6 @@ void closure_call_entry_callback(instrumentr_tracer_t tracer,
 
     process_arguments(
         argument_table, call, closure, call_data, function_data, call_env_data);
-
-    /* handle backtrace */
-    Backtrace& backtrace = tracing_state.get_backtrace();
-
-    backtrace.push(call);
 }
 
 void closure_call_exit_callback(instrumentr_tracer_t tracer,
@@ -127,8 +121,8 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
         instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
         result_type = instrumentr_value_type_get_name(val_type);
         // linking to record:
-        SEXP r_return_val = instrumentr_value_get_sexp(value);
-        static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
+        // SEXP r_return_val = instrumentr_value_get_sexp(value);
+        // static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
         // p_add_val(r_return_val);
 
     }
@@ -136,11 +130,6 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     Call* call_data = call_table.lookup(call_id);
 
     call_data->exit(result_type);
-
-    /* handle backtrace */
-    Backtrace& backtrace = tracing_state.get_backtrace();
-
-    backtrace.pop();
 }
 
 void tracing_entry_callback(instrumentr_tracer_t tracer,
