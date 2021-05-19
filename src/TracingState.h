@@ -1,16 +1,11 @@
-#ifndef LAZR_TRACING_STATE_H
-#define LAZR_TRACING_STATE_H
+#ifndef ARGTRACER_TRACING_STATE_H
+#define ARGTRACER_TRACING_STATE_H
 
 #include "Rincludes.h"
 #include "CallTable.h"
 #include "EnvironmentTable.h"
 #include "ArgumentTable.h"
 #include "FunctionTable.h"
-// #include "MetaprogrammingTable.h"
-// #include "EffectsTable.h"
-// #include "ArgumentReflectionTable.h"
-// #include "CallReflectionTable.h"
-// #include "Backtrace.h"
 #include <instrumentr/instrumentr.h>
 
 class TracingState {
@@ -50,46 +45,6 @@ class TracingState {
         return function_table_;
     }
 
-    // MetaprogrammingTable& get_metaprogramming_table() {
-    //     return metaprogramming_table_;
-    // }
-
-    // const MetaprogrammingTable& get_metaprogramming_table() const {
-    //     return metaprogramming_table_;
-    // }
-
-    // EffectsTable& get_effects_table() {
-    //     return effects_table_;
-    // }
-
-    // const EffectsTable& get_effects_table() const {
-    //     return effects_table_;
-    // }
-
-    // ArgumentReflectionTable& get_arg_ref_tab() {
-    //     return arg_ref_tab_;
-    // }
-
-    // const ArgumentReflectionTable& get_arg_ref_tab() const {
-    //     return arg_ref_tab_;
-    // }
-
-    // CallReflectionTable& get_call_ref_tab() {
-    //     return call_ref_tab_;
-    // }
-
-    // const CallReflectionTable& get_call_ref_tab() const {
-    //     return call_ref_tab_;
-    // }
-
-    // Backtrace& get_backtrace() {
-    //     return backtrace_;
-    // }
-
-    // const Backtrace& get_backtrace() const {
-    //     return backtrace_;
-    // }
-
     static void initialize(instrumentr_state_t state);
 
     static void finalize(instrumentr_state_t state);
@@ -101,11 +56,6 @@ class TracingState {
     EnvironmentTable environment_table_;
     ArgumentTable argument_table_;
     FunctionTable function_table_;
-    // MetaprogrammingTable metaprogramming_table_;
-    // EffectsTable effects_table_;
-    // ArgumentReflectionTable arg_ref_tab_;
-    // CallReflectionTable call_ref_tab_;
-    // Backtrace backtrace_;
 };
 
-#endif /* LAZR_TRACING_STATE_H */
+#endif /* ARGTRACER_TRACING_STATE_H */

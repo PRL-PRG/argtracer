@@ -1,5 +1,5 @@
-#ifndef LAZR_ARGUMENT_TABLE_H
-#define LAZR_ARGUMENT_TABLE_H
+#ifndef ARGTRACER_ARGUMENT_TABLE_H
+#define ARGTRACER_ARGUMENT_TABLE_H
 
 #include "Argument.h"
 #include "Environment.h"
@@ -130,28 +130,6 @@ class ArgumentTable {
         SEXP r_arg_type = PROTECT(allocVector(STRSXP, size_));
         SEXP r_expr_type = PROTECT(allocVector(STRSXP, size_));
         SEXP r_val_type = PROTECT(allocVector(STRSXP, size_));
-        // SEXP r_preforced = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_cap_force = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_cap_meta = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_cap_lookup = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_escaped = PROTECT(allocVector(LGLSXP, size_));
-        // SEXP r_esc_force = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_esc_meta = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_esc_lookup = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_con_force = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_con_lookup = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_force_depth = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_meta_depth = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_comp_pos = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_event_seq = PROTECT(allocVector(STRSXP, size_));
-        // SEXP r_self_effect_seq = PROTECT(allocVector(STRSXP, size_));
-        // SEXP r_effect_seq = PROTECT(allocVector(STRSXP, size_));
-        // SEXP r_self_ref_seq = PROTECT(allocVector(STRSXP, size_));
-        // SEXP r_ref_seq = PROTECT(allocVector(STRSXP, size_));
-        // SEXP r_parent_fun_id = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_parent_formal_pos = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_parent_call_id = PROTECT(allocVector(INTSXP, size_));
-        // SEXP r_parent_arg_id = PROTECT(allocVector(INTSXP, size_));
 
         int index = 0;
 
@@ -175,28 +153,7 @@ class ArgumentTable {
                                   r_arg_type,
                                   r_expr_type,
                                   r_val_type);
-                                  // r_preforced,
-                                  // r_cap_force,
-                                  // r_cap_meta,
-                                  // r_cap_lookup,
-                                  // r_escaped,
-                                  // r_esc_force,
-                                  // r_esc_meta,
-                                  // r_esc_lookup,
-                                  // r_con_force,
-                                  // r_con_lookup,
-                                  // r_force_depth,
-                                  // r_meta_depth,
-                                  // r_comp_pos,
-                                  // r_event_seq,
-                                  // r_self_effect_seq,
-                                  // r_effect_seq,
-                                  // r_self_ref_seq,
-                                  // r_ref_seq,
-                                  // r_parent_fun_id,
-                                  // r_parent_formal_pos,
-                                  // r_parent_call_id,
-                                  // r_parent_arg_id
+
                 ++index;
             }
         }
@@ -216,28 +173,6 @@ class ArgumentTable {
                                    r_arg_type,
                                    r_expr_type,
                                    r_val_type});
-                                   // r_preforced,
-                                   // r_cap_force,
-                                   // r_cap_meta,
-                                   // r_cap_lookup,
-                                   // r_escaped,
-                                   // r_esc_force,
-                                   // r_esc_meta,
-                                   // r_esc_lookup,
-                                   // r_con_force,
-                                   // r_con_lookup,
-                                   // r_force_depth,
-                                   // r_meta_depth,
-                                   // r_comp_pos,
-                                   // r_event_seq,
-                                   // r_self_effect_seq,
-                                   // r_effect_seq,
-                                   // r_self_ref_seq,
-                                   // r_ref_seq,
-                                   // r_parent_fun_id,
-                                   // r_parent_formal_pos,
-                                   // r_parent_call_id,
-                                   // r_parent_arg_id
 
         std::vector<std::string> names({"arg_id",
                                         "call_id",
@@ -254,28 +189,6 @@ class ArgumentTable {
                                         "arg_type",
                                         "expr_type",
                                         "val_type"});
-                                        // "preforced",
-                                        // "cap_force",
-                                        // "cap_meta",
-                                        // "cap_lookup",
-                                        // "escaped",
-                                        // "esc_force",
-                                        // "esc_meta",
-                                        // "esc_lookup",
-                                        // "con_force",
-                                        // "con_lookup",
-                                        // "force_depth",
-                                        // "meta_depth",
-                                        // "comp_pos",
-                                        // "event_seq",
-                                        // "self_effect_seq",
-                                        // "effect_seq",
-                                        // "self_ref_seq",
-                                        // "ref_seq",
-                                        // "parent_fun_id",
-                                        // "parent_formal_pos",
-                                        // "parent_call_id",
-                                        // "parent_arg_id"
 
         SEXP df = create_data_frame(names, columns);
 
@@ -303,7 +216,6 @@ class ArgumentTable {
         std::string arg_type = "vararg";
         std::string expr_type = LAZR_NA_STRING;
         std::string val_type = LAZR_NA_STRING;
-        // int preforced = 0;
         int dot_pos = 0;
         int default_arg = NA_LOGICAL;
 
@@ -320,7 +232,6 @@ class ArgumentTable {
                                                arg_type,
                                                expr_type,
                                                val_type);
-                                               // preforced
 
         insert_(argument_data);
     }
@@ -357,7 +268,6 @@ class ArgumentTable {
                                                arg_type,
                                                expr_type,
                                                val_type);
-                                               // preforced
 
         insert_(argument_data);
     }
@@ -389,7 +299,6 @@ class ArgumentTable {
         std::string arg_type = "promise";
         std::string expr_type = instrumentr_value_type_get_name(prom_expr_type);
         std::string val_type = instrumentr_value_type_get_name(prom_val_type);
-        // int preforced = instrumentr_promise_is_forced(promise);
 
         Argument* argument_data = new Argument(arg_id,
                                                call_id,
@@ -404,7 +313,6 @@ class ArgumentTable {
                                                arg_type,
                                                expr_type,
                                                val_type);
-                                               // preforced
 
         insert_(argument_data);
     }
@@ -426,7 +334,6 @@ class ArgumentTable {
             instrumentr_value_type_get_name(instrumentr_value_get_type(value));
         std::string expr_type = LAZR_NA_STRING;
         std::string val_type = LAZR_NA_STRING;
-        // int preforced = 0;
         int default_arg = NA_LOGICAL;
 
         Argument* argument_data = new Argument(arg_id,
@@ -442,7 +349,6 @@ class ArgumentTable {
                                                arg_type,
                                                expr_type,
                                                val_type);
-                                               // preforced
 
         insert_(argument_data);
     }
@@ -458,4 +364,4 @@ class ArgumentTable {
     }
 };
 
-#endif /* LAZR_ARGUMENT_TABLE_H */
+#endif /* ARGTRACER_ARGUMENT_TABLE_H */
