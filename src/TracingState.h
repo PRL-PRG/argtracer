@@ -9,7 +9,7 @@
 #include "MetaprogrammingTable.h"
 // #include "EffectsTable.h"
 #include "ArgumentReflectionTable.h"
-#include "CallReflectionTable.h"
+// #include "CallReflectionTable.h"
 // #include "Backtrace.h"
 #include <instrumentr/instrumentr.h>
 
@@ -74,13 +74,13 @@ class TracingState {
         return arg_ref_tab_;
     }
 
-    CallReflectionTable& get_call_ref_tab() {
-        return call_ref_tab_;
-    }
+    // CallReflectionTable& get_call_ref_tab() {
+    //     return call_ref_tab_;
+    // }
 
-    const CallReflectionTable& get_call_ref_tab() const {
-        return call_ref_tab_;
-    }
+    // const CallReflectionTable& get_call_ref_tab() const {
+    //     return call_ref_tab_;
+    // }
 
     // Backtrace& get_backtrace() {
     //     return backtrace_;
@@ -104,7 +104,7 @@ class TracingState {
     MetaprogrammingTable metaprogramming_table_;
     // EffectsTable effects_table_;
     ArgumentReflectionTable arg_ref_tab_;
-    CallReflectionTable call_ref_tab_;
+    // CallReflectionTable call_ref_tab_;
     // Backtrace backtrace_;
 };
 
