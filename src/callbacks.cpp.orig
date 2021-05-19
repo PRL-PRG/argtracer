@@ -26,7 +26,10 @@ void process_arguments(ArgumentTable& argument_table,
 
     int position = 0;
 
+<<<<<<< HEAD
     // linking to record:
+=======
+>>>>>>> new
     // static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
 
     while (instrumentr_value_is_pairlist(formals)) {
@@ -43,6 +46,10 @@ void process_arguments(ArgumentTable& argument_table,
         instrumentr_value_t argval =
             instrumentr_environment_lookup(call_env, nameval);
 
+<<<<<<< HEAD
+=======
+        // linking to record:
+>>>>>>> new
         // SEXP r_argval = instrumentr_value_get_sexp(argval);
         // p_add_val(r_argval);
 
@@ -96,11 +103,6 @@ void closure_call_entry_callback(instrumentr_tracer_t tracer,
 
     process_arguments(
         argument_table, call, closure, call_data, function_data, call_env_data);
-
-    /* handle backtrace */
-    Backtrace& backtrace = tracing_state.get_backtrace();
-
-    backtrace.push(call);
 }
 
 void closure_call_exit_callback(instrumentr_tracer_t tracer,
@@ -135,11 +137,6 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     Call* call_data = call_table.lookup(call_id);
 
     call_data->exit(result_type);
-
-    /* handle backtrace */
-    Backtrace& backtrace = tracing_state.get_backtrace();
-
-    backtrace.pop();
 }
 
 void tracing_entry_callback(instrumentr_tracer_t tracer,
