@@ -6,6 +6,7 @@
 #include <vector>
 
 
+
 std::string get_sexp_type(SEXP r_value) {
     if (r_value == R_UnboundValue) {
         return LAZR_NA_STRING;
@@ -96,6 +97,11 @@ void closure_call_entry_callback(instrumentr_tracer_t tracer,
 
     process_arguments(
         argument_table, call, closure, call_data, function_data, call_env_data);
+
+    /* handle backtrace */
+    Backtrace& backtrace = tracing_state.get_backtrace();
+
+    backtrace.push(call);
 }
 
 void closure_call_exit_callback(instrumentr_tracer_t tracer,
@@ -130,6 +136,11 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     Call* call_data = call_table.lookup(call_id);
 
     call_data->exit(result_type);
+
+    /* handle backtrace */
+    Backtrace& backtrace = tracing_state.get_backtrace();
+
+    backtrace.pop();
 }
 
 void tracing_entry_callback(instrumentr_tracer_t tracer,
