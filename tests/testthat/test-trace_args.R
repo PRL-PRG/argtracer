@@ -7,7 +7,7 @@ test_that("trace my_add1", {
     my_add <- function(x, y) {x + y}
     my_add(1, 1)
   })
-  
+
   expect_true(length(r$output$arguments) != 0)
   ## expect_equal(record::size_db(),  2)
   ## record::close_db("test_db/db_my_add")

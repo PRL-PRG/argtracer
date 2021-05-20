@@ -34,25 +34,28 @@ class ArgumentTable {
         int dot_pos = NA_INTEGER;
 
         if (arg_name == "..." || instrumentr_value_is_dot(argument)) {
-            insert_dot_(argument,
-                        formal_pos,
-                        arg_name,
-                        call_data,
-                        function_data,
-                        environment_data);
+          // TODO
+          // insert_dot_(argument,
+          //             formal_pos,
+          //             arg_name,
+          //             call_data,
+          //             function_data,
+          //             environment_data);
         }
 
         else if (instrumentr_value_is_missing(argument)) {
-            insert_missing_(instrumentr_value_as_missing(argument),
-                            formal_pos,
-                            dot_pos,
-                            arg_name,
-                            call_data,
-                            function_data,
-                            environment_data);
+          // TODO
+          // insert_missing_(instrumentr_value_as_missing(argument),
+          //                 formal_pos,
+          //                 dot_pos,
+          //                 arg_name,
+          //                 call_data,
+          //                 function_data,
+          //                 environment_data);
         }
 
         else if (instrumentr_value_is_promise(argument)) {
+          // TODO force promise and call insert_value
             insert_promise_(instrumentr_value_as_promise(argument),
                             formal_pos,
                             dot_pos,
@@ -122,8 +125,8 @@ class ArgumentTable {
         SEXP r_arg_name = PROTECT(allocVector(STRSXP, size_));
         SEXP r_formal_pos = PROTECT(allocVector(INTSXP, size_));
         SEXP r_dot_pos = PROTECT(allocVector(INTSXP, size_));
-        SEXP r_force_pos = PROTECT(allocVector(INTSXP, size_));
-        SEXP r_actual_pos = PROTECT(allocVector(INTSXP, size_));
+        // SEXP r_force_pos = PROTECT(allocVector(INTSXP, size_));
+        // SEXP r_actual_pos = PROTECT(allocVector(INTSXP, size_));
         SEXP r_default_arg = PROTECT(allocVector(LGLSXP, size_));
         SEXP r_vararg = PROTECT(allocVector(LGLSXP, size_));
         SEXP r_missing = PROTECT(allocVector(LGLSXP, size_));
@@ -145,8 +148,8 @@ class ArgumentTable {
                                   r_arg_name,
                                   r_formal_pos,
                                   r_dot_pos,
-                                  r_force_pos,
-                                  r_actual_pos,
+                                  // r_force_pos,
+                                  // r_actual_pos,
                                   r_default_arg,
                                   r_vararg,
                                   r_missing,
@@ -164,8 +167,8 @@ class ArgumentTable {
                                    r_call_env_id,
                                    r_formal_pos,
                                    r_dot_pos,
-                                   r_force_pos,
-                                   r_actual_pos,
+                                   // r_force_pos,
+                                   // r_actual_pos,
                                    r_default_arg,
                                    r_arg_name,
                                    r_vararg,
@@ -180,8 +183,8 @@ class ArgumentTable {
                                         "call_env_id",
                                         "formal_pos",
                                         "dot_pos",
-                                        "force_pos",
-                                        "actual_pos",
+                                        // "force_pos",
+                                        // "actual_pos",
                                         "default",
                                         "arg_name",
                                         "vararg",
@@ -192,7 +195,7 @@ class ArgumentTable {
 
         SEXP df = create_data_frame(names, columns);
 
-        UNPROTECT(15);
+        UNPROTECT(13);
 
         return df;
     }

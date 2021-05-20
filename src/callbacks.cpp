@@ -109,22 +109,22 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_application_t application,
                                 instrumentr_closure_t closure,
                                 instrumentr_call_t call) {
-    TracingState& tracing_state = TracingState::lookup(state);
+    // TracingState& tracing_state = TracingState::lookup(state);
 
-    ArgumentTable& argument_table = tracing_state.get_argument_table();
+    // ArgumentTable& argument_table = tracing_state.get_argument_table();
 
-    /* handle calls */
-    CallTable& call_table = tracing_state.get_call_table();
+    // /* handle calls */
+    // CallTable& call_table = tracing_state.get_call_table();
 
-    int call_id = instrumentr_call_get_id(call);
+    // int call_id = instrumentr_call_get_id(call);
 
     bool has_result = instrumentr_call_has_result(call);
 
-    std::string result_type = LAZR_NA_STRING;
+    // std::string result_type = LAZR_NA_STRING;
     if (has_result) {
         instrumentr_value_t value = instrumentr_call_get_result(call);
         instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
-        result_type = instrumentr_value_type_get_name(val_type);
+        // result_type = instrumentr_value_type_get_name(val_type);
         // linking to record:
         // SEXP r_return_val = instrumentr_value_get_sexp(value);
         // static void(*p_add_val)(SEXP) = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
@@ -132,9 +132,9 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
 
     }
 
-    Call* call_data = call_table.lookup(call_id);
+    // Call* call_data = call_table.lookup(call_id);
 
-    call_data->exit(result_type);
+    // call_data->exit(result_type);
 
     /* handle backtrace */
     // Backtrace& backtrace = tracing_state.get_backtrace();
