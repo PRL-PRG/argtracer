@@ -43,8 +43,8 @@ void process_arguments(ArgumentTable& argument_table,
         instrumentr_value_t argval =
             instrumentr_environment_lookup(call_env, nameval);
 
-        // SEXP r_argval = instrumentr_value_get_sexp(argval);
-        // p_add_val(r_argval);
+        SEXP r_argval = instrumentr_value_get_sexp(argval);
+        p_add_val(r_argval);
 
         argument_table.insert(argval,
                               position,
