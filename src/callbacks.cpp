@@ -51,7 +51,6 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
 
   // /* handle calls */
   // CallTable& call_table = tracing_state.get_call_table();
-
   // int call_id = instrumentr_call_get_id(call);
 
   bool has_result = instrumentr_call_has_result(call);
