@@ -34,24 +34,22 @@ class ArgumentTable {
         int dot_pos = NA_INTEGER;
 
         if (arg_name == "..." || instrumentr_value_is_dot(argument)) {
-          // TODO
-          // insert_dot_(argument,
-          //             formal_pos,
-          //             arg_name,
-          //             call_data,
-          //             function_data,
-          //             environment_data);
+          insert_dot_(argument,
+                      formal_pos,
+                      arg_name,
+                      call_data,
+                      function_data,
+                      environment_data);
         }
 
         else if (instrumentr_value_is_missing(argument)) {
-          // TODO
-          // insert_missing_(instrumentr_value_as_missing(argument),
-          //                 formal_pos,
-          //                 dot_pos,
-          //                 arg_name,
-          //                 call_data,
-          //                 function_data,
-          //                 environment_data);
+          insert_missing_(instrumentr_value_as_missing(argument),
+                          formal_pos,
+                          dot_pos,
+                          arg_name,
+                          call_data,
+                          function_data,
+                          environment_data);
         }
 
         else if (instrumentr_value_is_promise(argument)) {

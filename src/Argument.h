@@ -18,7 +18,7 @@ class Argument {
              const std::string& arg_type,
              const std::string& expr_type,
              const std::string& val_type)
-
+             // int preforced)
         : arg_id_(arg_id)
         , call_id_(call_id)
         , fun_id_(fun_id)
@@ -51,6 +51,10 @@ class Argument {
         return formal_pos_;
     }
 
+    // void set_force_position(int force_pos) {
+    //   force_pos_ = force_pos;
+    // }
+  
     void to_sexp(int index,
                  SEXP r_arg_id,
                  SEXP r_call_id,

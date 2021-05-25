@@ -98,7 +98,7 @@ class CallTable {
                                         "env_id",
                                         "successful",
                                         "result_type",
-                                        "force_order",
+                                        // "force_order",
                                         "esc_env",
                                         "call_expr"});
 
