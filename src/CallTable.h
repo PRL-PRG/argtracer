@@ -64,7 +64,7 @@ class CallTable {
         SEXP r_env_id = PROTECT(allocVector(INTSXP, size));
         SEXP r_successful = PROTECT(allocVector(LGLSXP, size));
         SEXP r_result_type = PROTECT(allocVector(STRSXP, size));
-        SEXP r_force_order = PROTECT(allocVector(STRSXP, size));
+        // SEXP r_force_order = PROTECT(allocVector(STRSXP, size));
         SEXP r_esc_env = PROTECT(allocVector(INTSXP, size));
         SEXP r_call_expr = PROTECT(allocVector(STRSXP, size));
 
@@ -79,7 +79,7 @@ class CallTable {
                           r_env_id,
                           r_successful,
                           r_result_type,
-                          r_force_order,
+                          // r_force_order,
                           r_esc_env,
                           r_call_expr);
         }
@@ -89,7 +89,7 @@ class CallTable {
                                    r_env_id,
                                    r_successful,
                                    r_result_type,
-                                   r_force_order,
+                                   // r_force_order,
                                    r_esc_env,
                                    r_call_expr});
 
@@ -104,7 +104,7 @@ class CallTable {
 
         SEXP df = create_data_frame(names, columns);
 
-        UNPROTECT(8);
+        UNPROTECT(7);
 
         return df;
     }

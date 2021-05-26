@@ -72,6 +72,8 @@ test_that("trace ggplot2::aes_all", {
     ggplot2::aes_all(names(mtcars))
     ggplot2::aes_all(c("x", "y", "col", "pch"))
   })
+
+  r
   ## expect_equal(record::size_db(), 9958)
   record:::report()
   record::close_db()
