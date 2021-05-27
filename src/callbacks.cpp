@@ -1,6 +1,5 @@
 #include "tracer.h"
 #include "callbacks.h"
-#include "TracingState.h"
 #include "utilities.h"
 #include <instrumentr/instrumentr.h>
 #include <vector>
@@ -17,8 +16,6 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
   if (!p_add_val) {
     p_add_val = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
   }
-
-  // TracingState& tracing_state = TracingState::lookup(state);
 
   instrumentr_environment_t call_env = instrumentr_call_get_environment(call);
   int position = 0;
@@ -49,10 +46,6 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     formals = instrumentr_pairlist_get_cdr(pairlist);
   }
 
-  // /* handle calls */
-  // CallTable& call_table = tracing_state.get_call_table();
-  // int call_id = instrumentr_call_get_id(call);
-
   bool has_result = instrumentr_call_has_result(call);
 
   // std::string result_type = LAZR_NA_STRING;
@@ -65,27 +58,5 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     SEXP r_return_val = instrumentr_value_get_sexp(value);
     p_add_val(r_return_val);
   }
-
-  // Call* call_data = call_table.lookup(call_id);
-
-  // call_data->exit(result_type);
 }
 
-
-void tracing_entry_callback(instrumentr_tracer_t tracer,
-                            instrumentr_callback_t callback,
-                            instrumentr_state_t state) {
-    TracingState::initialize(state);
-}
-
-void tracing_exit_callback(instrumentr_tracer_t tracer,
-                           instrumentr_callback_t callback,
-                           instrumentr_state_t state) {
-    TracingState& tracing_state = TracingState::lookup(state);
-    EnvironmentTable& env_table = tracing_state.get_environment_table();
-    FunctionTable& fun_table = tracing_state.get_function_table();
-
-    fun_table.infer_qualified_names(env_table);
-
-    TracingState::finalize(state);
-}

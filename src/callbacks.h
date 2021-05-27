@@ -3,13 +3,13 @@
 
 #include <instrumentr/instrumentr.h>
 
-void tracing_entry_callback(instrumentr_tracer_t tracer,
-                            instrumentr_callback_t callback,
-                            instrumentr_state_t state);
+/* void tracing_entry_callback(instrumentr_tracer_t tracer, */
+/*                             instrumentr_callback_t callback, */
+/*                             instrumentr_state_t state); */
 
-void tracing_exit_callback(instrumentr_tracer_t tracer,
-                           instrumentr_callback_t callback,
-                           instrumentr_state_t state);
+/* void tracing_exit_callback(instrumentr_tracer_t tracer, */
+/*                            instrumentr_callback_t callback, */
+/*                            instrumentr_state_t state); */
 
 /* void closure_call_entry_callback(instrumentr_tracer_t tracer, */
 /*                                  instrumentr_callback_t callback, */
