@@ -1,13 +1,16 @@
-if (FALSE) {
+## if (FALSE) {
+
+## gctorture()
+
 test_that("trace my_add1", {
   start <- Sys.time()
   record::open_db("test_db/db_my_add", create = TRUE)
-  
+
   r <- trace_args(code = {
     my_add <- function(x, y) {x + y}
     my_add(1, 1)
   })
-  
+
   expect_equal(record::size_db(),  2)
   record::close_db()
   end <- Sys.time()
@@ -17,12 +20,12 @@ test_that("trace my_add1", {
 test_that("trace my_add2", {
   start <- Sys.time()
   record::open_db("test_db/db_my_add", create = FALSE)
-  
+
   r <- trace_args(code = {
     my_add <- function(x, y) {x + y}
     my_add(2, 3)
   })
-  
+
   expect_equal(record::size_db(), 4)
   record:::report()
   record::close_db()
@@ -68,7 +71,7 @@ test_that("trace stringr::str_detect", {
   ## "collected 6417 promises + return vals from stringr::str_detect"
 })
 
-}
+## }
 
 ## if (FALSE) {
 test_that("trace ggplot2::aes_all", {

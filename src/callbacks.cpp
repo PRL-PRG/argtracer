@@ -5,7 +5,7 @@
 #include <vector>
 
 
-static void(*p_add_val)(SEXP) = NULL;
+// static void(*p_add_val)(SEXP) = NULL;
 
 void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_callback_t callback,
@@ -13,9 +13,9 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_application_t application,
                                 instrumentr_closure_t closure,
                                 instrumentr_call_t call) {
-  if (!p_add_val) {
-    p_add_val = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
-  }
+  // if (!p_add_val) {
+  //   p_add_val = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
+  // }
 
   instrumentr_environment_t call_env = instrumentr_call_get_environment(call);
   int position = 0;
@@ -38,8 +38,8 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     if(instrumentr_value_is_promise(argval)) {
       if (instrumentr_promise_is_forced((instrumentr_promise_t) argval)) {
         instrumentr_value_t value = instrumentr_promise_get_value((instrumentr_promise_t) argval);
-        SEXP r_promise_val = instrumentr_value_get_sexp(value);
-        p_add_val(r_promise_val);
+        // SEXP r_promise_val = instrumentr_value_get_sexp(value);
+        // p_add_val(r_promise_val);
       }
     }
     ++position;
@@ -55,8 +55,8 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     // result_type = instrumentr_value_type_get_name(val_type);
 
     // linking to record:
-    SEXP r_return_val = instrumentr_value_get_sexp(value);
-    p_add_val(r_return_val);
+    // SEXP r_return_val = instrumentr_value_get_sexp(value);
+    // p_add_val(r_return_val);
   }
 }
 
