@@ -1,3 +1,5 @@
+if (T) {
+
 test_that("trace my_add1", {
   record::open_db("test_db/db_my_add", create = TRUE)
 
@@ -6,7 +8,7 @@ test_that("trace my_add1", {
     my_add(1, 1)
   })
   expect_equal(record::size_db(),  2)
-  record::close_db("test_db/db_my_add")
+  record::close_db()
 })
 
 test_that("trace my_add2", {
@@ -18,7 +20,7 @@ test_that("trace my_add2", {
   })
 
   expect_equal(record::size_db(), 5)
-  record::close_db("test_db/db_my_add")
+  record::close_db()
 })
 
 test_that("trace stringr::str_detect", {
@@ -28,10 +30,9 @@ test_that("trace stringr::str_detect", {
     stringr::str_detect("AB", "A")
   })
   print(paste0("collected ", record::size_db(), " values from stringr::str_detect"))
-  record::close_db("test_db/db_str_detect")
+  record::close_db()
   expect_true(length(r$output$arguments) != 0)
 })
-
 
 test_that("trace ggplot2::aes_all", {
   record::open_db("test_db/db_aes_all", create = TRUE)
@@ -41,6 +42,9 @@ test_that("trace ggplot2::aes_all", {
     ggplot2::aes_all(c("x", "y", "col", "pch"))
   })
   print(paste0("collected ", record::size_db(), " values from ggplot2::aes_all"))
-  record::close_db("test_db/db_aes_all")
+  record::close_db()
   expect_true(length(r$output$arguments) != 0)
 })
+
+}
+
