@@ -1,28 +1,27 @@
 
-# lazr
+# argtracer
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of lazr is to analyze function strictness.
+The goal of argtracer is to collect R-eal values that are arguments and return values of function calls in the executable code from a corpus of CRAN packages
 
 ## Installation
 
-You can install the released version of lazr from [CRAN](https://CRAN.R-project.org) with:
+TBC
 
-``` r
-install.packages("lazr")
-```
+<!-- ``` r -->
+<!-- install.packages("lazr") -->
+<!-- ``` -->
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+This example traces the arguments and return values that are associated with the call to stringr::str_detectrecursively 
 
 ``` r
-library(lazr)
+library(argtracer)
 
-trace_strictness({
-    library(stringr)
-    str_c("a")
+trace_args({
+    stringr::str_detect("ab", "a")
 })
 ```

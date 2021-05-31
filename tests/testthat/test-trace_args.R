@@ -80,7 +80,7 @@ test_that("trace stringr::str_detect", {
 
   r <- trace_args(code = {
     ggplot2::aes_all(names(mtcars))
-    ## ggplot2::aes_all(c("x", "y", "col", "pch"))
+    ggplot2::aes_all(c("x", "y", "col", "pch"))
   })
 
   expect_equal(record::size_db(), 9958)

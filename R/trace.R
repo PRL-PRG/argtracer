@@ -1,6 +1,5 @@
-
 #' @export
-#' @importFrom instrumentr trace_code get_exec_stats
+#' @importFrom instrumentr trace_code
 trace_args <- function(code,
                        environment = parent.frame(),
                        quote = TRUE) {
