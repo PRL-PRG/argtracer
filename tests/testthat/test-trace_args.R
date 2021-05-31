@@ -74,7 +74,7 @@ test_that("trace stringr::str_detect", {
 })
 
 
-  test_that("trace ggplot2::aes_all", {
+test_that("trace ggplot2::aes_all", {
   start <- Sys.time()
   record::open_db("test_db/db_aes_all", create = TRUE)
 
@@ -88,7 +88,7 @@ test_that("trace stringr::str_detect", {
   record::close_db()
   end <- Sys.time()
   print(end - start)
-  ## "collected 105799 promises + return vals from ggplot2::aes_all"  
+  ## "collected 105799 promises + return vals from ggplot2::aes_all"
 })
 
 } else {
@@ -163,7 +163,7 @@ test_that("trace ggplot2::aes_all", {
 
   end <- Sys.time()
   print(end - start)
-  ## "collected 105799 promises + return vals from ggplot2::aes_all"  
+  ## "collected 105799 promises + return vals from ggplot2::aes_all"
 })
 
 }
