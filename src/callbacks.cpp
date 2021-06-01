@@ -4,8 +4,24 @@
 #include <instrumentr/instrumentr.h>
 #include <vector>
 
+int package_loading;
+// TODO: protect/unprotect?
+SEXP ln_fun = Rf_findFun(Rf_install("loadNamespace"), R_BaseEnv);
 
 static void(*p_add_val)(SEXP) = NULL;
+
+void closure_call_entry_callback(instrumentr_tracer_t tracer,
+                                 instrumentr_callback_t callback,
+                                 instrumentr_state_t state,
+                                 instrumentr_application_t application,
+                                 instrumentr_closure_t closure,
+                                 instrumentr_call_t call) {
+
+
+  SEXP fun = instrumentr_closure_get_sexp(closure);
+
+  if(fun == ln_fun) package_loading += 1;
+}
 
 void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_callback_t callback,
@@ -13,6 +29,11 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_application_t application,
                                 instrumentr_closure_t closure,
                                 instrumentr_call_t call) {
+  if(package_loading) {
+    package_loading -= 1;
+    return;
+  }
+
   if (!p_add_val) {
     p_add_val = (void(*)(SEXP)) R_GetCCallable("record", "add_val");
   }
