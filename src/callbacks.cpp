@@ -1,11 +1,13 @@
+#include <cassert>
 #include "tracer.h"
 #include "callbacks.h"
 #include "utilities.h"
 #include <instrumentr/instrumentr.h>
 #include <vector>
+#include <stdio.h>
+#include <string.h>
 
 int package_loading;
-// TODO: protect/unprotect?
 SEXP ln_fun = Rf_findFun(Rf_install("loadNamespace"), R_BaseEnv);
 
 static void(*p_add_val)(SEXP) = NULL;
@@ -17,10 +19,14 @@ void closure_call_entry_callback(instrumentr_tracer_t tracer,
                                  instrumentr_closure_t closure,
                                  instrumentr_call_t call) {
 
-
   SEXP fun = instrumentr_closure_get_sexp(closure);
+  // const char* name = instrumentr_closure_get_name(closure);
+  // Rprintf("%s\n", name);
 
-  if(fun == ln_fun) package_loading += 1;
+  if(fun == ln_fun) {
+    package_loading += 1;
+    // printf("+1!\n");
+  }
 }
 
 void closure_call_exit_callback(instrumentr_tracer_t tracer,
@@ -29,8 +35,17 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_application_t application,
                                 instrumentr_closure_t closure,
                                 instrumentr_call_t call) {
-  if(package_loading) {
+
+  SEXP fun = instrumentr_closure_get_sexp(closure);
+  const char* name = instrumentr_closure_get_name(closure);
+
+  if(fun == ln_fun) {
     package_loading -= 1;
+    // printf("-1!!\n");
+    return;
+  }
+
+  if (package_loading) {
     return;
   }
 
@@ -56,11 +71,18 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     instrumentr_value_t argval =
       instrumentr_environment_lookup(call_env, nameval);
 
+    std::string arg_type = LAZR_NA_STRING;
     if(instrumentr_value_is_promise(argval)) {
       if (instrumentr_promise_is_forced((instrumentr_promise_t) argval)) {
         instrumentr_value_t value = instrumentr_promise_get_value((instrumentr_promise_t) argval);
+        instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
+        arg_type = instrumentr_value_type_get_name(val_type);
+
         SEXP r_promise_val = instrumentr_value_get_sexp(value);
         p_add_val(r_promise_val);
+        // TODO
+        // p_add_type(arg_type);
+        // p_add_fun(name);
       }
     }
     ++position;
@@ -69,15 +91,17 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
 
   bool has_result = instrumentr_call_has_result(call);
 
-  // std::string result_type = LAZR_NA_STRING;
+  std::string ret_type = LAZR_NA_STRING;
   if (has_result) {
     instrumentr_value_t value = instrumentr_call_get_result(call);
     instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
-    // result_type = instrumentr_value_type_get_name(val_type);
+    ret_type = instrumentr_value_type_get_name(val_type);
 
     // linking to record:
-    SEXP r_return_val = instrumentr_value_get_sexp(value);
-    p_add_val(r_return_val);
+    SEXP r_ret_val = instrumentr_value_get_sexp(value);
+    p_add_val(r_ret_val);
+    // TODO
+    // p_add_type(ret_type);
+    // p_add_fun(name);
   }
 }
-
