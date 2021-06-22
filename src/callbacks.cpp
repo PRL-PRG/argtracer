@@ -78,8 +78,9 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
         instrumentr_value_type_t val_type = instrumentr_value_get_type(value);
         arg_type = instrumentr_value_type_get_name(val_type);
 
-        SEXP r_promise_val = instrumentr_value_get_sexp(value);
+        SEXP r_promise_val = PROTECT(instrumentr_value_get_sexp(value));
         p_add_val(r_promise_val);
+        UNPROTECT(1);
         // TODO
         // p_add_type(arg_type);
         // p_add_fun(name);
@@ -98,8 +99,9 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     ret_type = instrumentr_value_type_get_name(val_type);
 
     // linking to record:
-    SEXP r_ret_val = instrumentr_value_get_sexp(value);
+    SEXP r_ret_val = PROTECT(instrumentr_value_get_sexp(value));
     p_add_val(r_ret_val);
+    UNPROTECT(1);
     // TODO
     // p_add_type(ret_type);
     // p_add_fun(name);
