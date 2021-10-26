@@ -18,6 +18,11 @@ SEXP r_argtracer_create() {
     instrumentr_tracer_set_callback(tracer, callback);
     instrumentr_object_release(callback);
 
+    // callback = instrumentr_callback_create_from_c_function(
+    //     (void*) (builtin_call_exit_callback), INSTRUMENTR_EVENT_BUILTIN_CALL_EXIT);
+    // instrumentr_tracer_set_callback(tracer, callback);
+    // instrumentr_object_release(callback);
+
     SEXP r_tracer = instrumentr_tracer_wrap(tracer);
     instrumentr_object_release(tracer);
     return r_tracer;

@@ -2,6 +2,6 @@
 
 export(trace_args)
 export(trace_file)
-importFrom(instrumentr,get_exec_stats)
 importFrom(instrumentr,trace_code)
+importFrom(sxpdb,open_db)
 useDynLib(argtracer, .registration = TRUE, .fixes = "C_")
