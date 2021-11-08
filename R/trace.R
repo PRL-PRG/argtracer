@@ -26,5 +26,5 @@ trace_file <- function(file, db_path=paste0(basename(file), ".sxpdb")) {
         message("Tracing ", file, " failed: ", e$message)
     })
 
-    sxpdb::close_db()
+    sxpdb::close_db(db)
 }
