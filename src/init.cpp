@@ -11,7 +11,7 @@ INSTRUMENTR_DEFINE_API()
 extern "C" {
 
 static const R_CallMethodDef callMethods[] = {
-    {"argtracer_create", (DL_FUNC) &r_argtracer_create, 0},
+    {"argtracer_create", (DL_FUNC) &r_argtracer_create, 1},
     {NULL, NULL, 0}};
 
 void R_init_argtracer(DllInfo* dll) {

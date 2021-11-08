@@ -90,3 +90,5 @@ po/*~
 ## Custom gitignore
 ################################################################################
 /inst/run
+.cache
+compile_commands.json

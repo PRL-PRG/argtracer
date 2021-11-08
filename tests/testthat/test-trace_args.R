@@ -1,16 +1,17 @@
 test_that("recordtrace my_add1", {
   db_path <- "test_db/db_my_add"
-  unlink(db_path, recursive=TRUE)
-  sxpdb::open_db(db_path, create = TRUE)
+  
+  on.exit(unlink(db_path, recursive=TRUE))
+
+  db <- sxpdb::open_db(db_path)
 
   r <- trace_args(code = {
     my_add <- function(x, y) {sin(x) + cos(y)}
     my_add(1, 1)
-  })
+  }, db = db)
 
-  expect_equal(sxpdb::size_db(),  2)
-  browser()
-  sxpdb::close_db()
+  expect_equal(sxpdb::size_db(db),  2)
+  sxpdb::close_db(db)
 })
 
 #   test_that("trace my_add2", {

@@ -8,7 +8,7 @@
 #include <string.h>
 
 static int package_loading;
-static void(*p_add_val)(SEXP) = NULL;
+static void(*sxpdb_add_val)(SEXP, SEXP) = NULL;
 // SEXP ln_fun = Rf_findFun(Rf_install("loadNamespace"), R_BaseEnv);      Aviral says this could be problematic
 
 void closure_call_entry_callback(instrumentr_tracer_t tracer,
@@ -57,14 +57,16 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     return;
   }
 
-  if (!p_add_val) {
-    p_add_val = (void(*)(SEXP)) R_GetCCallable("sxpdb", "add_val");
+  if (!sxpdb_add_val) {
+    sxpdb_add_val = (void(*)(SEXP, SEXP)) R_GetCCallable("sxpdb", "add_val");
   }
 
   instrumentr_environment_t call_env = instrumentr_call_get_environment(call);
   instrumentr_value_t formals = instrumentr_closure_get_formals(closure);
 
   int position = 0;
+
+  SEXP db = PROTECT(instrumentr_state_lookup(state, "db", R_NilValue));
 
   while (instrumentr_value_is_pairlist(formals)) {
     instrumentr_pairlist_t pairlist = instrumentr_value_as_pairlist(formals);
@@ -82,7 +84,7 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
       if (instrumentr_promise_is_forced(promise)) {
         instrumentr_value_t value = instrumentr_promise_get_value(promise);
         SEXP value_sexp = PROTECT(instrumentr_value_get_sexp(value));
-        p_add_val(value_sexp);
+        sxpdb_add_val(db, value_sexp);
         UNPROTECT(1);
       }
     }
@@ -96,7 +98,9 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
   if (has_result) {
     instrumentr_value_t value = instrumentr_call_get_result(call);
     SEXP value_sexp = PROTECT(instrumentr_value_get_sexp(value));
-    p_add_val(value_sexp);
+    sxpdb_add_val(db, value_sexp);
     UNPROTECT(1);
   }
+
+  UNPROTECT(1); // db
 }
