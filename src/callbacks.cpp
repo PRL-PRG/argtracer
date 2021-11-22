@@ -2,13 +2,17 @@
 #include "tracer.h"
 #include "callbacks.h"
 #include "utilities.h"
+#include "constants.h"
 #include <instrumentr/instrumentr.h>
 #include <vector>
 #include <stdio.h>
 #include <string.h>
 
 static int package_loading;
-static void(*sxpdb_add_val)(SEXP, SEXP) = NULL;
+static SEXP (*sxpdb_add_val_origin_)(SEXP sxpdb, SEXP val, 
+                                     const char* package_name, 
+                                     const char* function_name, 
+                                     const char* argument_name) = NULL;
 // SEXP ln_fun = Rf_findFun(Rf_install("loadNamespace"), R_BaseEnv);      Aviral says this could be problematic
 
 void closure_call_entry_callback(instrumentr_tracer_t tracer,
@@ -45,10 +49,12 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
                                 instrumentr_closure_t closure,
                                 instrumentr_call_t call) {
 
-  SEXP fun = instrumentr_closure_get_sexp(closure);
-  const char* name = instrumentr_closure_get_name(closure);
+  const char* fun_name = instrumentr_closure_get_name(closure);
 
-  if(name != NULL && !strcmp(name, "loadNamespace")) {
+  instrumentr_environment_t env = instrumentr_closure_get_environment(closure);
+  const char* pkg_name = instrumentr_environment_get_name(env);
+  
+  if(fun_name != NULL && !strcmp(fun_name, "loadNamespace")) {
     package_loading -= 1;
     return;
   }
@@ -57,8 +63,8 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     return;
   }
 
-  if (!sxpdb_add_val) {
-    sxpdb_add_val = (void(*)(SEXP, SEXP)) R_GetCCallable("sxpdb", "add_val");
+  if (!sxpdb_add_val_origin_) {
+    sxpdb_add_val_origin_ = (SEXP(*)(SEXP, SEXP, const char*, const char*, const char*)) R_GetCCallable("sxpdb", "add_val_origin_");
   }
 
   instrumentr_environment_t call_env = instrumentr_call_get_environment(call);
@@ -72,7 +78,7 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
     instrumentr_pairlist_t pairlist = instrumentr_value_as_pairlist(formals);
     instrumentr_value_t tagval = instrumentr_pairlist_get_tag(pairlist);
     instrumentr_symbol_t nameval = instrumentr_value_as_symbol(tagval);
-    const char* argument_name = instrumentr_char_get_element(instrumentr_symbol_get_element(nameval));
+    const char* param_name = instrumentr_char_get_element(instrumentr_symbol_get_element(nameval));
 
     instrumentr_value_t argval =
       instrumentr_environment_lookup(call_env, nameval);
@@ -84,7 +90,7 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
       if (instrumentr_promise_is_forced(promise)) {
         instrumentr_value_t value = instrumentr_promise_get_value(promise);
         SEXP value_sexp = PROTECT(instrumentr_value_get_sexp(value));
-        sxpdb_add_val(db, value_sexp);
+        sxpdb_add_val_origin_(db, value_sexp, pkg_name, fun_name, param_name);
         UNPROTECT(1);
       }
     }
@@ -98,7 +104,7 @@ void closure_call_exit_callback(instrumentr_tracer_t tracer,
   if (has_result) {
     instrumentr_value_t value = instrumentr_call_get_result(call);
     SEXP value_sexp = PROTECT(instrumentr_value_get_sexp(value));
-    sxpdb_add_val(db, value_sexp);
+    sxpdb_add_val_origin_(db, value_sexp, pkg_name, fun_name, RETURN_PARAM_NAME);
     UNPROTECT(1);
   }
 
