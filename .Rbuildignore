@@ -1,2 +1,11 @@
-^LICENSE\.md$
+^\.cache$
+^\.clangd$
 ^\.clang-format
+^compile_commands.json$
+^\.gdb_history$
+^inst/tools$
+^LICENSE\.md$
+^Makefile$
+^.RDara$
+^README.md$
+^.Rhistory$
