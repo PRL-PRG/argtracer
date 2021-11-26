@@ -1,16 +1,13 @@
 #' @export
-#' @importFrom instrumentr trace_code
-trace_args <- function(code,
-                       environment = parent.frame(),
+trace_code <- function(code,
                        quote = TRUE,
+                       environment = parent.frame(),
                        db = db) {
-    argtracer <- .Call(C_argtracer_create, db = db)
-
-    if(quote) {
+    if (quote) {
         code <- substitute(code)
     }
 
-    invisible(trace_code(argtracer, code, environment = environment, quote = FALSE))
+    invisible(.Call(C_trace_code, code, environment))
 }
 
 #' @export
