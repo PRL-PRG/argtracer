@@ -1,0 +1,31 @@
+#!/bin/bash
+
+CF="inst/tools/git-clang-format"
+
+which clang-format &> /dev/null
+
+if [[ $? -ne 0 ]]; then
+  echo "clang-format not found!"
+  echo "Please, please, consider installing it."
+  sleep 2
+  exit
+fi
+
+if [[ `$CF --diff | wc -l` -gt 1 ]]; then
+
+  echo "Your changes do not match clang format"
+
+  $CF --diff
+
+  exec < /dev/tty
+  read -p "Do you wish to apply this patch? [Yn]" yn
+  case $yn in
+    [Nn]* ) printf ":(\n"
+            exit 0;;
+        * ) echo "applying patch..."
+            $CF
+            printf "\nYou can now commit again.\n"
+            exit 2;;
+        esac
+
+fi
