@@ -1,10 +1,5 @@
-test_that("recordtrace my_add1", {
-  db_path <- tempdir()
-  on.exit(unlink(db_path, recursive=TRUE))
-
-  # db <- sxpdb::open_db(db_path)
-
-  r <- trace_code(code = {
+test_that("basic test", with_tempdb("db", {
+  trace_code(db, code = {
     my_add <- function(x, y) {
       runif(x+y)
     }
@@ -12,10 +7,8 @@ test_that("recordtrace my_add1", {
     my_add(1, 1)
   })
 
-  # browser()
-  # expect_equal(sxpdb::size_db(db),  4)
-  # sxpdb::close_db(db)
-})
+  expect_equal(sxpdb::size_db(db),  4)
+}))
 
 # test_that("db works with ...", {
 #   db_path <- tempdir()
