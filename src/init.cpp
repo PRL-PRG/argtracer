@@ -1,15 +1,13 @@
-#include <R.h>
 #include <R_ext/Rdynload.h>
 #include <Rinternals.h>
-#include <stdlib.h> // for NULL
-#include "tracer.h"
+#include <stdlib.h>
 
+#include "tracer.h"
 
 extern "C" {
 
 static const R_CallMethodDef callMethods[] = {
-    {"trace_code", (DL_FUNC) &trace_code, 3},
-    {NULL, NULL, 0}};
+    {"trace_code", (DL_FUNC)&trace_code, 3}, {NULL, NULL, 0}};
 
 void R_init_argtracer(DllInfo* dll) {
     R_registerRoutines(dll, NULL, callMethods, NULL, NULL);

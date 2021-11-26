@@ -7,7 +7,9 @@
 
 #ifndef DEBUG
 #undef Debug
-#define Debug(...) do {} while(0)
+#define Debug(...)                                                             \
+    do {                                                                       \
+    } while (0)
 #endif
 
 #endif // DEBUG_H
