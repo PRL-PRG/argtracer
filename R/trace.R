@@ -1,13 +1,13 @@
 #' @export
-trace_code <- function(code,
+trace_code <- function(db,
+                       code,
                        quote = TRUE,
-                       environment = parent.frame(),
-                       db = db) {
+                       environment = parent.frame()) {
     if (quote) {
         code <- substitute(code)
     }
 
-    invisible(.Call(C_trace_code, code, environment))
+    invisible(.Call(C_trace_code, db, code, environment))
 }
 
 #' @export

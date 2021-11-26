@@ -8,7 +8,7 @@
 extern "C" {
 
 static const R_CallMethodDef callMethods[] = {
-    {"trace_code", (DL_FUNC) &trace_code, 2},
+    {"trace_code", (DL_FUNC) &trace_code, 3},
     {NULL, NULL, 0}};
 
 void R_init_argtracer(DllInfo* dll) {

@@ -13,6 +13,8 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 SystemRequirements: C++17
+LinkingTo:
+  sxpdb
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Suggests: 
