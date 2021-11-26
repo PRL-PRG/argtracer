@@ -1,10 +1,10 @@
-#ifndef ARGTRACER_H
-#define ARGTRACER_H
+#ifndef TRACER_H
+#define TRACER_H
 
-#include "Rincludes.h"
+#include <R/Rinternals.h>
 
 extern "C" {
-SEXP r_argtracer_create(SEXP);
+SEXP trace_code(SEXP, SEXP);
 }
 
-#endif /* ARGTRACER_H */
+#endif /* TRACER_H */
