@@ -104,11 +104,17 @@ void closure_exit_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
         SEXP param_name = TAG(cons);
         if (param_name != R_DotsSymbol) {
             SEXP param_val = Rf_findVarInFrame3(rho, param_name, TRUE);
-            if (param_val == R_UnboundValue)
+            if (param_val == R_UnboundValue) {
                 continue;
-            if (TYPEOF(param_val) == PROMSXP &&
-                PRVALUE(param_val) == R_UnboundValue)
-                continue;
+            }
+
+            if (TYPEOF(param_val) == PROMSXP) {
+                if (PRVALUE(param_val) == R_UnboundValue) {
+                    continue;
+                } else {
+                    param_val = PRVALUE(param_val);
+                }
+            }
 
             std::string param_name_str = CHAR(PRINTNAME(param_name));
             state->add_trace(op, param_name_str, param_val);
