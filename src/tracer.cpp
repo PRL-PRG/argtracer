@@ -14,8 +14,11 @@
 typedef std::array<char, 20> SxpHash;
 typedef std::pair<SxpHash, std::string> Trace;
 typedef SEXP (*AddValFun)(SEXP, SEXP);
+typedef SEXP (*AddOriginFun)(SEXP, const void*, const char*, const char*,
+                             const char*);
 
 static AddValFun add_val = NULL;
+static AddOriginFun add_origin = NULL;
 
 std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "loadNamespace"};
 
@@ -31,10 +34,6 @@ class TracerState {
     TracerState(SEXP db) : db_(db){};
 
     void add_trace(SEXP clo, std::string param, SEXP val) {
-        if (!add_val) {
-            add_val = (AddValFun)R_GetCCallable("sxpdb", "add_val");
-        }
-
         Debug("Recording %s\n", param.c_str());
 
         SEXP hash_raw = add_val(db_, val);
@@ -47,6 +46,36 @@ class TracerState {
 
         auto trace = std::make_pair(hash, param);
         traces_[clo].insert(trace);
+    }
+
+    void push_origins() {
+        std::set<SEXP> seen_env;
+        std::unordered_map<SEXP, FunOrigin> origins;
+
+        for (auto& [clo, traces] : traces_) {
+            if (TYPEOF(clo) == FREESXP) {
+                Debug("Free");
+                continue;
+            }
+
+            SEXP env = CLOENV(clo);
+
+            auto seen = seen_env.insert(env);
+            if (seen.second) {
+                populate_namespace_map(env, origins);
+            }
+
+            auto origin = origins.find(clo);
+            if (origin == origins.end()) {
+                continue;
+            }
+
+            auto [pkg_name, fun_name] = origin->second;
+            for (auto& [hash, param] : traces) {
+                add_origin(db_, (void*)hash.data(), pkg_name.c_str(),
+                           fun_name.c_str(), param.c_str());
+            }
+        }
     }
 };
 
@@ -128,52 +157,62 @@ void closure_exit_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
 
 // TODO: move to a better place
 void initialize_globals() {
-    if (!blacklisted_funs.empty()) {
-        return;
+    if (!add_val) {
+        add_val = (AddValFun)R_GetCCallable("sxpdb", "add_val");
+    }
+    if (!add_origin) {
+        add_origin = (AddOriginFun)R_GetCCallable("sxpdb", "add_origin_");
     }
 
-    for (int i = 0; i < sizeof(BLACKLISTED_FUNS) / sizeof(std::string); i++) {
-        SEXP fun = Rf_findVarInFrame(R_BaseEnv,
-                                     Rf_install(BLACKLISTED_FUNS[i].c_str()));
+    if (blacklisted_funs.empty()) {
+        for (int i = 0; i < sizeof(BLACKLISTED_FUNS) / sizeof(std::string);
+             i++) {
+            SEXP fun = Rf_findVarInFrame(
+                R_BaseEnv, Rf_install(BLACKLISTED_FUNS[i].c_str()));
 
-        if (TYPEOF(fun) == PROMSXP && PRVALUE(fun) != R_UnboundValue) {
-            fun = PRVALUE(fun);
-        }
+            if (TYPEOF(fun) == PROMSXP && PRVALUE(fun) != R_UnboundValue) {
+                fun = PRVALUE(fun);
+            }
 
-        switch (TYPEOF(fun)) {
-        case BUILTINSXP:
-        case CLOSXP:
-        case SPECIALSXP:
-            blacklisted_funs.insert(std::make_pair(fun, BLACKLISTED_FUNS[i]));
-            break;
-        default:
-            Rf_error("Unable to load blacklisted function %s\n",
-                     BLACKLISTED_FUNS[i].c_str());
+            switch (TYPEOF(fun)) {
+            case BUILTINSXP:
+            case CLOSXP:
+            case SPECIALSXP:
+                blacklisted_funs.insert(
+                    std::make_pair(fun, BLACKLISTED_FUNS[i]));
+                break;
+            default:
+                Rf_error("Unable to load blacklisted function %s\n",
+                         BLACKLISTED_FUNS[i].c_str());
+            }
         }
     }
 }
 
-dyntracer_t* create_tracer(SEXP db) {
+dyntracer_t* create_tracer() {
     dyntracer_t* tracer = dyntracer_create(NULL);
+
     dyntracer_set_builtin_exit_callback(tracer, &builtin_exit_callback);
     dyntracer_set_builtin_entry_callback(tracer, &builtin_entry_callback);
     dyntracer_set_closure_exit_callback(tracer, &closure_exit_callback);
     dyntracer_set_closure_entry_callback(tracer, &closure_entry_callback);
 
-    TracerState* state = new TracerState(db);
-    dyntracer_set_data(tracer, (void*)state);
-
     return tracer;
 }
 
 SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
-    dyntracer_t* tracer = create_tracer(db);
-
     initialize_globals();
+
+    dyntracer_t* tracer = create_tracer();
+
+    TracerState state(db);
+    dyntracer_set_data(tracer, (void*)&state);
 
     dyntrace_enable();
     dyntrace_result_t result = dyntrace_trace_code(tracer, code, rho);
     dyntrace_disable();
+
+    state.push_origins();
 
     return R_NilValue;
 }
