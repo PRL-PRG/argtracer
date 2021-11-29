@@ -18,7 +18,7 @@ trace_file <- function(file, db_path=paste0(basename(file), ".sxpdb")) {
     tryCatch({
         code <- parse(file = file)
         code <- as.call(c(`{`, code))
-        invisible(trace_args(code, quote = FALSE, db = db))
+        invisible(trace_code(db, code, quote = FALSE))
     }, error=function(e) {
         message("Tracing ", file, " failed: ", e$message)
     })
