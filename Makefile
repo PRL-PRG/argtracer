@@ -1,6 +1,8 @@
-.PHONY: all build check document test
+BEAR := $(shell command -v bear 2> /dev/null)
 
-all: document build check install
+.PHONY: all build check clean document test install
+
+all: install
 
 build: document
 	R CMD build .
@@ -20,8 +22,9 @@ document:
 test:
 	R -e 'devtools::test()'
 
-lintr:
-	R --slave -e "lintr::lint_package()"
-
 install: clean
+ifdef BEAR
+	bear -- R CMD INSTALL .
+else
 	R CMD INSTALL .
+endif
