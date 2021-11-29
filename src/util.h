@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <R/Rinternals.h>
+#include <Rinternals.h>
 #include <optional>
 #include <string>
 #include <unordered_map>

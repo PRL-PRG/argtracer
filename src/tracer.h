@@ -1,7 +1,7 @@
 #ifndef TRACER_H
 #define TRACER_H
 
-#include <R/Rinternals.h>
+#include <Rinternals.h>
 
 extern "C" {
 SEXP trace_code(SEXP, SEXP, SEXP);
