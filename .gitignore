@@ -89,7 +89,8 @@ po/*~
 ################################################################################
 ## Custom gitignore
 ################################################################################
-/inst/run
-.cache
-compile_commands.json
+/.cache/
 /.gdb_history
+/inst/bench/_targets/
+/inst/bench/out/
+compile_commands.json

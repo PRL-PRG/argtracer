@@ -4,6 +4,7 @@
 ^compile_commands.json$
 ^\.gdb_history$
 ^inst/tools$
+^inst/bench$
 ^LICENSE\.md$
 ^Makefile$
 ^.RDara$
