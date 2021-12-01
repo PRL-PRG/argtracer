@@ -1,18 +1,17 @@
 #include <algorithm>
 #include <array>
-#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <Rdyntrace.h>
 
 #include "constants.h"
 #include "debug.h"
+#include "hashing.h"
 #include "tracer.h"
 #include "util.h"
 
-typedef std::array<char, 20> SxpHash;
-typedef std::pair<SxpHash, std::string> Trace;
 typedef SEXP (*AddValFun)(SEXP, SEXP);
 typedef SEXP (*AddOriginFun)(SEXP, const void*, const char*, const char*,
                              const char*);
@@ -27,8 +26,8 @@ int blacklist_stack = 0;
 
 class TracerState {
   private:
-    std::unordered_map<SEXP, std::set<Trace>> traces_;
     int result_;
+    std::unordered_map<SEXP, std::unordered_set<Trace>> traces_;
     SEXP db_;
 
   public:
@@ -46,15 +45,15 @@ class TracerState {
             return;
         }
 
-        SxpHash hash;
-        std::copy_n(RAW(hash_raw), Rf_length(hash_raw), hash.begin());
+        SxpHash hash = XXH128_hashFromCanonical(
+            reinterpret_cast<XXH128_canonical_t*>(RAW(hash_raw)));
 
         auto trace = std::make_pair(hash, param);
         traces_[clo].insert(trace);
     }
 
     void push_origins() {
-        std::set<SEXP> seen_env;
+        std::unordered_set<SEXP> seen_env;
         std::unordered_map<SEXP, FunOrigin> origins;
 
         for (auto& [clo, traces] : traces_) {
@@ -77,8 +76,8 @@ class TracerState {
 
             auto [pkg_name, fun_name] = origin->second;
             for (auto& [hash, param] : traces) {
-                add_origin(db_, (void*)hash.data(), pkg_name.c_str(),
-                           fun_name.c_str(), param.c_str());
+                add_origin(db_, &hash, pkg_name.c_str(), fun_name.c_str(),
+                           param.c_str());
             }
         }
     }
