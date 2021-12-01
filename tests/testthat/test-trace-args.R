@@ -1,13 +1,53 @@
+#     library(stringr)
+# test_that("stringr", with_tempdb("db", {
+#   trace_code(db, code = {
+#     dog <- "The quick brown dog"
+#     str_to_upper(dog)
+#     str_to_lower(dog)
+#     str_to_title(dog)
+#     str_to_sentence("the quick brown dog")
+#
+#     # Locale matters!
+#     str_to_upper("i") # English
+#     str_to_upper("i", "tr") # Turkish
+#     print("****** A *********")
+#   })
+#
+#   browser()
+#   expect_equal(sxpdb::size_db(db),  6)
+#
+# }))
+
 test_that("basic test", with_tempdb("db", {
-  trace_code(db, code = {
+  res <- trace_code(db, code = {
     my_add <- function(x, y) {
-      runif(x+y)
+      paste(x, y)
     }
 
-    my_add(1, 1)
+    my_add(1, 2)
   })
 
-  expect_equal(sxpdb::size_db(db),  4)
+  expect_equal(res, 0)
+
+  expect_equal(sxpdb::size_db(db),  6)
+
+  origins <- do.call(rbind, sxpdb::view_origins_db(db))
+
+  expect_equal(unique(origins$package), "base")
+  expect_equal(
+    sort(unique(origins$`function`)),
+    c("isTRUE", "paste")
+  )
+
+  expect_equal(
+    sort(subset(origins, `function`=="paste")$argument),
+    c("collapse", "recycle0", "return", "sep")
+  )
+
+  expect_equal(
+    sort(subset(origins, `function`=="isTRUE")$argument),
+    c("return", "x")
+  )
 }))
 
 # test_that("db works with ...", {
@@ -55,7 +95,7 @@ test_that("basic test", with_tempdb("db", {
 #       if (add_one(x) == 2) TRUE else FALSE
 #     }
 #     add_one <- function (x) { x + 1 }
-#     
+#
 #     r <- trace_args(code = {
 #       my_fun <- function(x, y) {
 #         if (if_true(x)) y else x
