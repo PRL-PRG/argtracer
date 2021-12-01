@@ -28,10 +28,15 @@ int blacklist_stack = 0;
 class TracerState {
   private:
     std::unordered_map<SEXP, std::set<Trace>> traces_;
+    int result_;
     SEXP db_;
 
   public:
-    TracerState(SEXP db) : db_(db){};
+    TracerState(SEXP db) : db_(db), result_(0){};
+
+    int get_result() { return result_; }
+
+    void set_result(int result) { result_ = result; }
 
     void add_trace(SEXP clo, std::string param, SEXP val) {
         Debug("Recording %s\n", param.c_str());
@@ -189,6 +194,12 @@ void initialize_globals() {
     }
 }
 
+void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
+                   SEXP result, int error) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    state->set_result(error);
+}
+
 dyntracer_t* create_tracer() {
     dyntracer_t* tracer = dyntracer_create(NULL);
 
@@ -196,6 +207,7 @@ dyntracer_t* create_tracer() {
     dyntracer_set_builtin_entry_callback(tracer, &builtin_entry_callback);
     dyntracer_set_closure_exit_callback(tracer, &closure_exit_callback);
     dyntracer_set_closure_entry_callback(tracer, &closure_entry_callback);
+    dyntracer_set_dyntrace_exit_callback(tracer, &exit_callback);
 
     return tracer;
 }
@@ -214,5 +226,5 @@ SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
 
     state.push_origins();
 
-    return R_NilValue;
+    return Rf_ScalarInteger(state.get_result());
 }
