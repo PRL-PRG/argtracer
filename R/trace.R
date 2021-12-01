@@ -7,21 +7,38 @@ trace_code <- function(db,
         code <- substitute(code)
     }
 
+    # sxpdb uses TRACE frag
+    tracingState(on = FALSE)
     invisible(.Call(C_trace_code, db, code, environment))
 }
 
 #' @export
 #' @importFrom sxpdb open_db close_db
-trace_file <- function(file, db_path=paste0(basename(file), ".sxpdb")) {
+trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb")) {
     db <- sxpdb::open_db(db_path)
 
-    tryCatch({
-        code <- parse(file = file)
-        code <- as.call(c(`{`, code))
-        invisible(trace_code(db, code, quote = FALSE))
-    }, error=function(e) {
-        message("Tracing ", file, " failed: ", e$message)
-    })
+    time <- c("elapsed" = NA)
+    status <- NA
+    db_size <- NA
+    error <- NA
+
+    tryCatch(
+        {
+            code <- parse(file = file)
+            code <- as.call(c(`{`, code))
+            time <- system.time(status <- trace_code(db, code, quote = FALSE))
+            db_size <- sxpdb::size_db(db)
+        },
+        error = function(e) {
+            message("Tracing ", file, " failed: ", e$message)
+            error <<- e$message
+            status <<- -1
+        }
+    )
+
+    time <- time["elapsed"]
 
     sxpdb::close_db(db)
+
+    data.frame(status = status, time = time, file = file, db_path = db_path, db_size = db_size, error = error)
 }
