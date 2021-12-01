@@ -5,11 +5,11 @@
 
 #define Debug(...) Rprintf("*** " __VA_ARGS__);
 
-#ifndef DEBUG
+#ifdef NDEBUG
 #undef Debug
 #define Debug(...)                                                             \
     do {                                                                       \
     } while (0)
-#endif
+#endif // NDEBUG
 
 #endif // DEBUG_H
