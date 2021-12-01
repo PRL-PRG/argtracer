@@ -1,5 +1,9 @@
 BEAR := $(shell command -v bear 2> /dev/null)
 
+ifdef BEAR
+	BEAR := $(BEAR) --
+endif
+
 .PHONY: all build check clean document test install
 
 all: install
@@ -23,8 +27,4 @@ test:
 	R -e 'devtools::test()'
 
 install: clean
-ifdef BEAR
-	bear -- R CMD INSTALL .
-else
-	R CMD INSTALL .
-endif
+	$(BEAR) R CMD INSTALL .
