@@ -91,6 +91,8 @@ po/*~
 ################################################################################
 /.cache/
 /.gdb_history
+/.idea/
+/.vscode/
 /inst/bench/_targets/
 /inst/bench/out/
 compile_commands.json
