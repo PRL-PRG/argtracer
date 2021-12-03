@@ -1,22 +1,14 @@
-#     library(stringr)
-# test_that("stringr", with_tempdb("db", {
-#   trace_code(db, code = {
-#     dog <- "The quick brown dog"
-#     str_to_upper(dog)
-#     str_to_lower(dog)
-#     str_to_title(dog)
-#     str_to_sentence("the quick brown dog")
-#
-#     # Locale matters!
-#     str_to_upper("i") # English
-#     str_to_upper("i", "tr") # Turkish
-#     print("****** A *********")
-#   })
-#
-#   browser()
-#   expect_equal(sxpdb::size_db(db),  6)
-#
-# }))
+test_that("empty", with_tempdb("db", {
+    trace_code(db, code = {})
+    expect_equal(sxpdb::size_db(db), 0)
+}))
+
+test_that("longjump", with_tempdb("db", {
+    trace_code(db, code = {
+        library(stringr)
+    })
+    expect_equal(sxpdb::size_db(db), 0)
+}))
 
 test_that("basic test", with_tempdb("db", {
   res <- trace_code(db, code = {
