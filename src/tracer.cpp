@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <array>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 
 #include <Rdyntrace.h>
 
@@ -19,10 +21,30 @@ typedef SEXP (*AddOriginFun)(SEXP, const void*, const char*, const char*,
 static AddValFun add_val = NULL;
 static AddOriginFun add_origin = NULL;
 
-std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "loadNamespace"};
+std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "library", "loadNamespace",
+                                  "require"};
 
+typedef struct {
+    SEXP call;
+    SEXP op;
+    SEXP args;
+    SEXP rho;
+} Call;
+
+typedef struct {
+    void* context;
+} Context;
+
+typedef std::variant<Call, Context> Frame;
+#define IS_CALL(f) (f.index() == 0)
+#define IS_CNTX(f) (f.index() == 1)
+
+// a map of resolved addresses of functions from BLACKLISTED_FUNS
 std::unordered_map<SEXP, std::string> blacklisted_funs;
+// a depth of blacklisted functions
 int blacklist_stack = 0;
+// a call stack with both contexts and function calls
+std::stack<Frame> call_stack;
 
 class TracerState {
   private:
@@ -83,55 +105,46 @@ class TracerState {
     }
 };
 
-#define HANDLE_IGNORE_FUNS_ENTRY(op)                                           \
-    do {                                                                       \
-        auto blacklist_fun = blacklisted_funs.find(op);                        \
-        if (blacklist_fun != blacklisted_funs.end()) {                         \
-            Debug("Entering ignored fun %s\n", blacklist_fun->second.c_str()); \
-            blacklist_stack++;                                                 \
-        }                                                                      \
-    } while (0)
+void call_entry(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho) {
+    Trace("%s--> %p (%d)\n", std::string(2 * frames.size(), ' ').c_str(), call,
+          frames.size());
+    call_stack.push(Frame(Call{call, op, args, rho}));
 
-#define HANDLE_IGNORE_FUNS_EXIT(op)                                            \
-    do {                                                                       \
-        auto blacklist_fun = blacklisted_funs.find(op);                        \
-        if (blacklist_fun != blacklisted_funs.end()) {                         \
-            Debug("Exiting ignored fun %s\n", blacklist_fun->second.c_str());  \
-            blacklist_stack--;                                                 \
-        }                                                                      \
-        if (blacklist_stack != 0) {                                            \
-            Debug("%d\n", blacklist_stack);                                    \
-            return;                                                            \
-        }                                                                      \
-    } while (0)
-
-void builtin_entry_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
-                            SEXP rho, dyntrace_dispatch_t dispatch) {
-    HANDLE_IGNORE_FUNS_ENTRY(op);
+    auto blacklist_fun = blacklisted_funs.find(op);
+    if (blacklist_fun != blacklisted_funs.end()) {
+        Debug("Entering ignored fun %s\n", blacklist_fun->second.c_str());
+        blacklist_stack++;
+    }
 }
 
-void builtin_exit_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
-                           SEXP rho, dyntrace_dispatch_t dispatch,
-                           SEXP result) {
-    HANDLE_IGNORE_FUNS_EXIT(op);
-}
+void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+               SEXP result) {
+    call_stack.pop();
+    Trace("%s<-- %p (%d)\n", std::string(2 * frames.size(), ' ').c_str(), call,
+          frames.size());
 
-void closure_entry_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
-                            SEXP rho, dyntrace_dispatch_t dispatch) {
-    HANDLE_IGNORE_FUNS_ENTRY(op);
-}
+    auto blacklist_fun = blacklisted_funs.find(op);
+    if (blacklist_fun != blacklisted_funs.end()) {
+        --blacklist_stack;
+        Debug("Exiting ignored fun %s (%d)\n", blacklist_fun->second.c_str(),
+              blacklist_stack);
+        return;
+    }
 
-// TODO: test ...
-// TODO: test missing
-// TODO: test exception <- what happens with the result?
-void closure_exit_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
-                           SEXP rho, dyntrace_dispatch_t dispatch,
-                           SEXP result) {
-    HANDLE_IGNORE_FUNS_EXIT(op);
+    if (blacklist_stack != 0) {
+        return;
+    }
+
+    auto type = TYPEOF(op);
+
+    if (type != CLOSXP) {
+        // for now
+        return;
+    }
 
     auto state = (TracerState*)dyntracer_get_data(tracer);
 
-    Debug("Called %p\n", op);
+    Debug("Tracing %p\n", op);
 
     for (SEXP cons = FORMALS(op); cons != R_NilValue; cons = CDR(cons)) {
         SEXP param_name = TAG(cons);
@@ -157,6 +170,51 @@ void closure_exit_callback(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args,
     }
 
     state->add_trace(op, RETURN_PARAM_NAME, result);
+}
+
+void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
+                   SEXP result, int error) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    state->set_result(error);
+}
+
+void context_entry(dyntracer_t* tracer, void* pointer) {
+    Trace("%s==> %p (%d)\n", std::string(2 * frames.size(), ' ').c_str(),
+          pointer, frames.size());
+
+    call_stack.push(Frame(Context{pointer}));
+}
+
+void context_exit(dyntracer_t* tracer, void* pointer) {
+    Trace("%s<== %p (%d) [%p]\n",
+          std::string(2 * (frames.size() - 1), ' ').c_str(), pointer,
+          frames.size() - 1, std::get<Context>(frames.top()).context);
+
+    call_stack.pop();
+}
+
+void context_jump_callback(dyntracer_t* tracer, void* pointer,
+                           SEXP return_value, int restart) {
+    Trace("%sJUMP BEGIN (%p)\n", std::string(2 * frames.size(), ' ').c_str(),
+          pointer);
+
+    while (!call_stack.empty()) {
+        Frame f = call_stack.top();
+        if (IS_CALL(f)) {
+            auto call = std::get<Call>(f);
+            call_exit(tracer, call.call, call.op, call.args, call.rho,
+                      R_NilValue);
+        } else if (IS_CNTX(f)) {
+            auto cntx = std::get<Context>(f);
+            if (cntx.context == pointer) {
+                break;
+            } else {
+                context_exit(tracer, cntx.context);
+            }
+        }
+    }
+
+    Trace("%sJUMP END\n", std::string(2 * frames.size(), ' ').c_str());
 }
 
 // TODO: move to a better place
@@ -193,19 +251,45 @@ void initialize_globals() {
     }
 }
 
-void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
-                   SEXP result, int error) {
-    auto state = (TracerState*)dyntracer_get_data(tracer);
-    state->set_result(error);
-}
-
 dyntracer_t* create_tracer() {
     dyntracer_t* tracer = dyntracer_create(NULL);
 
-    dyntracer_set_builtin_exit_callback(tracer, &builtin_exit_callback);
-    dyntracer_set_builtin_entry_callback(tracer, &builtin_entry_callback);
-    dyntracer_set_closure_exit_callback(tracer, &closure_exit_callback);
-    dyntracer_set_closure_entry_callback(tracer, &closure_entry_callback);
+    dyntracer_set_builtin_entry_callback(
+        tracer, [](dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+                   dyntrace_dispatch_t dispatch) {
+            call_entry(tracer, call, op, args, rho);
+        });
+    dyntracer_set_special_entry_callback(
+        tracer, [](dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+                   dyntrace_dispatch_t dispatch) {
+            call_entry(tracer, call, op, args, rho);
+        });
+    dyntracer_set_closure_entry_callback(
+        tracer, [](dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+                   dyntrace_dispatch_t dispatch) {
+            call_entry(tracer, call, op, args, rho);
+        });
+
+    dyntracer_set_builtin_exit_callback(
+        tracer, [](dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+                   dyntrace_dispatch_t dispatch, SEXP result) {
+            call_exit(tracer, call, op, args, rho, result);
+        });
+    dyntracer_set_special_exit_callback(
+        tracer, [](dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+                   dyntrace_dispatch_t dispatch, SEXP result) {
+            call_exit(tracer, call, op, args, rho, result);
+        });
+    dyntracer_set_closure_exit_callback(
+        tracer, [](dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
+                   dyntrace_dispatch_t dispatch, SEXP result) {
+            call_exit(tracer, call, op, args, rho, result);
+        });
+
+    dyntracer_set_context_entry_callback(tracer, &context_entry);
+    dyntracer_set_context_exit_callback(tracer, &context_exit);
+    dyntracer_set_context_jump_callback(tracer, &context_jump_callback);
+
     dyntracer_set_dyntrace_exit_callback(tracer, &exit_callback);
 
     return tracer;
