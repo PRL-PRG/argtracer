@@ -9,14 +9,23 @@ R_DYNTRACE_GDB <- "../../../R-dyntrace-gdb"
 
 R_VMS <- tribble(
     ~name, ~path,
-    "vanilla", R_VANILLA,
-    "vanilla-gdb", R_VANILLA_GDB,
-    "dyntrace", R_DYNTRACE,
-    "dyntrace-gdb", R_DYNTRACE_GDB
+    "vanilla", R_VANILLA#,
+    # "vanilla-gdb", R_VANILLA_GDB,
+    # "dyntrace", R_DYNTRACE,
+    # "dyntrace-gdb", R_DYNTRACE_GDB
+)
+
+R_ENVIR <- c(
+    callr::rcmd_safe_env(),
+    "R_KEEP_PKG_SOURCE" = 1,
+    "R_ENABLE_JIT" = 0,
+    "R_COMPILE_PKGS" = 0,
+    "R_DISABLE_BYTECODE" = 1
 )
 
 # maximum time allowed for a program to run in seconds
-TIMEOUT <- 15 * 60
+TIMEOUT <- 5 * 60
+SPLIT_TESTTHAT_TESTS <- TRUE
 
 out_dir <- "out"
 if (!dir.exists(out_dir)) {
@@ -79,7 +88,7 @@ list(
                 packages$package,
                 pkg_dir = packages_src,
                 output_dir = output_dir,
-                split_testthat = FALSE,
+                split_testthat = SPLIT_TESTTHAT_TESTS,
                 compute_sloc = FALSE
             )
             file.path(output_dir, res$file)
@@ -109,7 +118,8 @@ list(
                 timeout = TIMEOUT,
                 r_home = r_vms$path,
                 lib_path = lib_dir,
-                keep_output = "on_error"
+                keep_output = "on_error",
+                r_envir = R_ENVIR
             ) %>%
                 add_column(R = r_vms$name)
         },
@@ -118,5 +128,30 @@ list(
     tar_target(
         run,
         left_join(programs_metadata, programs_run, by = "file")
+    ),
+    # install different versions of the package using devtools
+    # each into new directory and then use that one together with the lib_dir
+    tar_target(
+        programs_trace,
+        {
+            tmp_db <- tempfile(fileext = ".sxpdb")
+            file <- normalizePath(programs_files_)
+            withr::defer(unlink(tmp_db, recursive = TRUE))
+            callr::r(
+                function(file, db) {
+                    res <- argtracer::trace_file(file, db)
+                    print(res)
+                    res
+                },
+                list(file, tmp_db),
+                libpath = normalizePath(lib_dir),
+                arch = normalizePath(file.path(R_DYNTRACE, "bin", "R"), mustWork = TRUE),
+                show = TRUE,
+                wd = dirname(file),
+                env = R_ENVIR,
+                timeout = TIMEOUT
+            )
+        },
+        pattern = map(programs_files_)
     )
 )
