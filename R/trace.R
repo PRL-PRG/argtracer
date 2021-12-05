@@ -42,3 +42,9 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb")) {
 
     data.frame(status = status, time = time, file = file, db_path = db_path, db_size = db_size, error = error)
 }
+
+test_trace_file <- function(file) {
+    db_path <- tempfile(fileext = ".sxpdb")
+    cat("*** DB: ", db_path, "\n")
+    trace_file(file, db_path)
+}
