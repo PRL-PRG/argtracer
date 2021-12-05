@@ -2,9 +2,10 @@
 #define DEBUG_H
 
 #include <Rinternals.h>
+#include <cstdio>
 
-#define Debug(...) Rprintf("*** " __VA_ARGS__);
-#define Trace(...) Rprintf(__VA_ARGS__);
+#define Debug(...) printf("*** " __VA_ARGS__);
+#define Trace(...) printf(__VA_ARGS__);
 
 #ifdef NDEBUG
 #undef Debug
