@@ -21,7 +21,7 @@ test_that("basic test", with_tempdb("db", {
 
   expect_equal(res, 0)
 
-  expect_equal(sxpdb::size_db(db),  6)
+  expect_equal(sxpdb::size_db(db),  4)
 
   origins <- do.call(rbind, sxpdb::view_origins_db(db))
 

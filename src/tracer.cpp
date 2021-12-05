@@ -20,6 +20,7 @@ typedef SEXP (*AddOriginFun)(SEXP, const void*, const char*, const char*,
 
 static AddValFun add_val = NULL;
 static AddOriginFun add_origin = NULL;
+bool is_freesxp(SEXP);
 
 std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "library", "loadNamespace",
                                   "require"};
@@ -41,26 +42,46 @@ typedef std::variant<Call, Context> Frame;
 
 // a map of resolved addresses of functions from BLACKLISTED_FUNS
 std::unordered_map<SEXP, std::string> blacklisted_funs;
-// a depth of blacklisted functions
-int blacklist_stack = 0;
-// a call stack with both contexts and function calls
-std::stack<Frame> call_stack;
 
 class TracerState {
   private:
     int result_;
     std::unordered_map<SEXP, std::unordered_set<Trace>> traces_;
     SEXP db_;
+    // a depth of blacklisted functions
+    int blacklist_stack_;
+    // a call stack with both contexts and function calls
+    std::stack<Frame> call_stack_;
+    // a map of seen environments
+    std::unordered_map<SEXP, std::optional<std::string>> envirs_;
 
   public:
-    TracerState(SEXP db) : db_(db), result_(0){};
+    TracerState(SEXP db) : db_(db), result_(0), blacklist_stack_(0){};
+
+    int inc_blacklist_stack() { return ++blacklist_stack_; }
+
+    int dec_blacklist_stack() { return --blacklist_stack_; }
+
+    int get_blacklist_stack() { return blacklist_stack_; }
+
+    std::stack<Frame>& get_call_stack() { return call_stack_; }
 
     int get_result() { return result_; }
 
     void set_result(int result) { result_ = result; }
 
-    void add_trace(SEXP clo, std::string param, SEXP val) {
+    void add_trace_val(SEXP clo, std::string param, SEXP val) {
         Debug("Recording %s\n", param.c_str());
+
+        SEXP env = CLOENV(clo);
+        if (envirs_.find(env) == envirs_.end()) {
+            envirs_[env] = env_get_name(env);
+        }
+        auto env_name_opt = envirs_[env];
+
+        if (!env_name_opt.has_value()) {
+            return;
+        }
 
         SEXP hash_raw = add_val(db_, val);
         if (hash_raw == R_NilValue) {
@@ -74,12 +95,48 @@ class TracerState {
         traces_[clo].insert(trace);
     }
 
+    void add_trace(SEXP clo, SEXP rho, SEXP result) {
+        Debug("Tracing %p\n", clo);
+
+        for (SEXP cons = FORMALS(clo); cons != R_NilValue; cons = CDR(cons)) {
+            SEXP param_name = TAG(cons);
+            if (param_name != R_DotsSymbol) {
+                SEXP param_val = Rf_findVarInFrame3(rho, param_name, TRUE);
+                if (param_val == R_UnboundValue) {
+                    continue;
+                }
+
+                if (TYPEOF(param_val) == PROMSXP) {
+                    if (PRVALUE(param_val) == R_UnboundValue) {
+                        continue;
+                    } else {
+                        param_val = PRVALUE(param_val);
+                    }
+                }
+
+                std::string param_name_str = CHAR(PRINTNAME(param_name));
+                add_trace_val(clo, param_name_str, param_val);
+            } else {
+                // TODO: fix dotdotdot
+            }
+        }
+
+        if (result != R_UnboundValue) {
+            add_trace_val(clo, RETURN_PARAM_NAME, result);
+        }
+    }
+
     void push_origins() {
         std::unordered_set<SEXP> seen_env;
         std::unordered_map<SEXP, FunOrigin> origins;
 
-        for (auto& [clo, traces] : traces_) {
-            if (TYPEOF(clo) == FREESXP) {
+        // TODO: provide a stats of how many values we were not able
+        // to match back to origin
+        for (const auto& [clo, traces] : traces_) {
+            // an alternative would be to check at each
+            // call if the op comes from a package or
+            // namespace environment
+            if (is_freesxp(clo) || TYPEOF(clo) != CLOSXP) {
                 Debug("Free");
                 continue;
             }
@@ -106,70 +163,53 @@ class TracerState {
 };
 
 void call_entry(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho) {
-    Trace("%s--> %p (%d)\n", std::string(2 * frames.size(), ' ').c_str(), call,
-          frames.size());
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    auto& call_stack = state->get_call_stack();
+
+    Trace("%s--> %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
+          call, call_stack.size());
+
     call_stack.push(Frame(Call{call, op, args, rho}));
 
     auto blacklist_fun = blacklisted_funs.find(op);
     if (blacklist_fun != blacklisted_funs.end()) {
         Debug("Entering ignored fun %s\n", blacklist_fun->second.c_str());
-        blacklist_stack++;
+        state->inc_blacklist_stack();
     }
 }
 
 void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
                SEXP result) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    auto& call_stack = state->get_call_stack();
+
     call_stack.pop();
-    Trace("%s<-- %p (%d)\n", std::string(2 * frames.size(), ' ').c_str(), call,
-          frames.size());
+
+    Trace("%s<-- %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
+          call, call_stack.size());
 
     auto blacklist_fun = blacklisted_funs.find(op);
     if (blacklist_fun != blacklisted_funs.end()) {
-        --blacklist_stack;
+        state->dec_blacklist_stack();
+
         Debug("Exiting ignored fun %s (%d)\n", blacklist_fun->second.c_str(),
-              blacklist_stack);
+              state->get_blacklist_stack());
+
         return;
     }
 
-    if (blacklist_stack != 0) {
+    if (state->get_blacklist_stack() != 0) {
         return;
     }
 
     auto type = TYPEOF(op);
 
     if (type != CLOSXP) {
-        // for now
+        // TODO add support for buildsxp
         return;
+    } else {
+        state->add_trace(op, rho, result);
     }
-
-    auto state = (TracerState*)dyntracer_get_data(tracer);
-
-    Debug("Tracing %p\n", op);
-
-    for (SEXP cons = FORMALS(op); cons != R_NilValue; cons = CDR(cons)) {
-        SEXP param_name = TAG(cons);
-        if (param_name != R_DotsSymbol) {
-            SEXP param_val = Rf_findVarInFrame3(rho, param_name, TRUE);
-            if (param_val == R_UnboundValue) {
-                continue;
-            }
-
-            if (TYPEOF(param_val) == PROMSXP) {
-                if (PRVALUE(param_val) == R_UnboundValue) {
-                    continue;
-                } else {
-                    param_val = PRVALUE(param_val);
-                }
-            }
-
-            std::string param_name_str = CHAR(PRINTNAME(param_name));
-            state->add_trace(op, param_name_str, param_val);
-        } else {
-            // TODO: fix dotdotdot
-        }
-    }
-
-    state->add_trace(op, RETURN_PARAM_NAME, result);
 }
 
 void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
@@ -179,31 +219,40 @@ void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
 }
 
 void context_entry(dyntracer_t* tracer, void* pointer) {
-    Trace("%s==> %p (%d)\n", std::string(2 * frames.size(), ' ').c_str(),
-          pointer, frames.size());
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    auto& call_stack = state->get_call_stack();
+
+    Trace("%s==> %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
+          pointer, call_stack.size());
 
     call_stack.push(Frame(Context{pointer}));
 }
 
 void context_exit(dyntracer_t* tracer, void* pointer) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    auto& call_stack = state->get_call_stack();
+
     Trace("%s<== %p (%d) [%p]\n",
-          std::string(2 * (frames.size() - 1), ' ').c_str(), pointer,
-          frames.size() - 1, std::get<Context>(frames.top()).context);
+          std::string(2 * (call_stack.size() - 1), ' ').c_str(), pointer,
+          call_stack.size() - 1, std::get<Context>(call_stack.top()).context);
 
     call_stack.pop();
 }
 
 void context_jump_callback(dyntracer_t* tracer, void* pointer,
                            SEXP return_value, int restart) {
-    Trace("%sJUMP BEGIN (%p)\n", std::string(2 * frames.size(), ' ').c_str(),
-          pointer);
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+    auto& call_stack = state->get_call_stack();
+
+    Trace("%sJUMP BEGIN (%p)\n",
+          std::string(2 * call_stack.size(), ' ').c_str(), pointer);
 
     while (!call_stack.empty()) {
         Frame f = call_stack.top();
         if (IS_CALL(f)) {
             auto call = std::get<Call>(f);
             call_exit(tracer, call.call, call.op, call.args, call.rho,
-                      R_NilValue);
+                      R_UnboundValue);
         } else if (IS_CNTX(f)) {
             auto cntx = std::get<Context>(f);
             if (cntx.context == pointer) {
@@ -214,7 +263,7 @@ void context_jump_callback(dyntracer_t* tracer, void* pointer,
         }
     }
 
-    Trace("%sJUMP END\n", std::string(2 * frames.size(), ' ').c_str());
+    Trace("%sJUMP END\n", std::string(2 * call_stack.size(), ' ').c_str());
 }
 
 // TODO: move to a better place
