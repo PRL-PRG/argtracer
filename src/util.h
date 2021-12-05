@@ -8,6 +8,7 @@
 
 typedef std::pair<std::string, std::string> FunOrigin;
 
+SEXP get_or_load_binding(SEXP env, SEXP binding);
 std::optional<std::string> env_get_name(SEXP);
 void populate_namespace_map(SEXP env, std::unordered_map<SEXP, FunOrigin>& map);
 

@@ -14,6 +14,21 @@
 #include "tracer.h"
 #include "util.h"
 
+namespace std {
+template <>
+// TODO: generic template for std::pair
+struct hash<FunOrigin> {
+    size_t operator()(const FunOrigin& c) const {
+        size_t result = 0;
+        hash<string> str_hash;
+
+        hash_combine(result, str_hash(c.first));
+        hash_combine(result, str_hash(c.second));
+        return result;
+    }
+};
+} // namespace std
+
 typedef SEXP (*AddValFun)(SEXP, SEXP);
 typedef SEXP (*AddOriginFun)(SEXP, const void*, const char*, const char*,
                              const char*);
@@ -42,18 +57,24 @@ typedef std::variant<Call, Context> Frame;
 
 // a map of resolved addresses of functions from BLACKLISTED_FUNS
 std::unordered_map<SEXP, std::string> blacklisted_funs;
+SEXP loadNamespaceFun = NULL;
 
 class TracerState {
   private:
-    int result_;
-    std::unordered_map<SEXP, std::unordered_set<Trace>> traces_;
+    // the SEXP database
     SEXP db_;
+    // the result of the tracing 0 - success, 1 - the code threw an exception
+    int result_;
+    // a map of traces
+    std::unordered_map<FunOrigin, std::unordered_set<Trace>> traces_;
     // a depth of blacklisted functions
     int blacklist_stack_;
     // a call stack with both contexts and function calls
     std::stack<Frame> call_stack_;
     // a map of seen environments
-    std::unordered_map<SEXP, std::optional<std::string>> envirs_;
+    std::unordered_map<SEXP, std::string> envirs_;
+    // a map of known functions
+    std::unordered_map<SEXP, std::string> funs_;
 
   public:
     TracerState(SEXP db) : db_(db), result_(0), blacklist_stack_(0){};
@@ -70,19 +91,7 @@ class TracerState {
 
     void set_result(int result) { result_ = result; }
 
-    void add_trace_val(SEXP clo, std::string param, SEXP val) {
-        Debug("Recording %s\n", param.c_str());
-
-        SEXP env = CLOENV(clo);
-        if (envirs_.find(env) == envirs_.end()) {
-            envirs_[env] = env_get_name(env);
-        }
-        auto env_name_opt = envirs_[env];
-
-        if (!env_name_opt.has_value()) {
-            return;
-        }
-
+    void add_trace_val(FunOrigin fun, std::string param, SEXP val) {
         SEXP hash_raw = add_val(db_, val);
         if (hash_raw == R_NilValue) {
             return;
@@ -92,16 +101,69 @@ class TracerState {
             reinterpret_cast<XXH128_canonical_t*>(RAW(hash_raw)));
 
         auto trace = std::make_pair(hash, param);
-        traces_[clo].insert(trace);
+        traces_[fun].insert(trace);
+    }
+
+    void populate_namespace(SEXP env) {
+        if (envirs_.find(env) != envirs_.end()) {
+            Debug("Namespace: %p already loaded\n");
+            return;
+        }
+
+        auto pkg_name = env_get_name(env);
+
+        if (!pkg_name) {
+            Debug("Environment: %p is not a namespace\n");
+            return;
+        }
+
+        envirs_[env] = *pkg_name;
+
+        auto bindings = PROTECT(R_lsInternal3(env, TRUE, FALSE));
+
+        Debug("Populating %p: %s\n", env, (*pkg_name).c_str());
+
+        for (int i = 0; i < Rf_length(bindings); i++) {
+            auto binding = STRING_ELT(bindings, i);
+            std::string fun_name = CHAR(binding);
+
+            auto fun = get_or_load_binding(env, Rf_installChar(binding));
+
+            if (TYPEOF(fun) != CLOSXP) {
+                // only care about closures
+                continue;
+            }
+
+            Debug("Loaded %s::%s\n", (*pkg_name).c_str(), fun_name.c_str());
+
+            funs_[fun] = fun_name;
+        }
+
+        UNPROTECT(1);
     }
 
     void add_trace(SEXP clo, SEXP rho, SEXP result) {
         Debug("Tracing %p\n", clo);
 
+        SEXP env = CLOENV(clo);
+        auto env_key = envirs_.find(env);
+        if (env_key == envirs_.end()) {
+            Debug("%p: not from a namespace\n", clo);
+            return;
+        }
+        auto pkg_name = env_key->second;
+
+        auto fun_key = funs_.find(clo);
+        if (fun_key == funs_.end()) {
+            Debug("%p: not a named closure\n", clo);
+            return;
+        }
+        auto fun_name = fun_key->second;
+
         for (SEXP cons = FORMALS(clo); cons != R_NilValue; cons = CDR(cons)) {
-            SEXP param_name = TAG(cons);
-            if (param_name != R_DotsSymbol) {
-                SEXP param_val = Rf_findVarInFrame3(rho, param_name, TRUE);
+            SEXP param_tag = TAG(cons);
+            if (param_tag != R_DotsSymbol) {
+                SEXP param_val = Rf_findVarInFrame3(rho, param_tag, TRUE);
                 if (param_val == R_UnboundValue) {
                     continue;
                 }
@@ -114,50 +176,17 @@ class TracerState {
                     }
                 }
 
-                std::string param_name_str = CHAR(PRINTNAME(param_name));
-                add_trace_val(clo, param_name_str, param_val);
+                std::string param_name = CHAR(PRINTNAME(param_tag));
+                Debug("Recorded: %s::%s - %s\n", pkg_name.c_str(),
+                      fun_name.c_str(), param_name.c_str());
+                //               add_trace_val(clo, param_name_str, param_val);
             } else {
                 // TODO: fix dotdotdot
             }
         }
 
         if (result != R_UnboundValue) {
-            add_trace_val(clo, RETURN_PARAM_NAME, result);
-        }
-    }
-
-    void push_origins() {
-        std::unordered_set<SEXP> seen_env;
-        std::unordered_map<SEXP, FunOrigin> origins;
-
-        // TODO: provide a stats of how many values we were not able
-        // to match back to origin
-        for (const auto& [clo, traces] : traces_) {
-            // an alternative would be to check at each
-            // call if the op comes from a package or
-            // namespace environment
-            if (is_freesxp(clo) || TYPEOF(clo) != CLOSXP) {
-                Debug("Free");
-                continue;
-            }
-
-            SEXP env = CLOENV(clo);
-
-            auto seen = seen_env.insert(env);
-            if (seen.second) {
-                populate_namespace_map(env, origins);
-            }
-
-            auto origin = origins.find(clo);
-            if (origin == origins.end()) {
-                continue;
-            }
-
-            auto [pkg_name, fun_name] = origin->second;
-            for (auto& [hash, param] : traces) {
-                add_origin(db_, &hash, pkg_name.c_str(), fun_name.c_str(),
-                           param.c_str());
-            }
+            //            add_trace_val(clo, RETURN_PARAM_NAME, result);
         }
     }
 };
@@ -185,6 +214,10 @@ void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     call_stack.pop();
 
+    if (op == loadNamespaceFun && TYPEOF(result) == ENVSXP) {
+        state->populate_namespace(result);
+    }
+
     Trace("%s<-- %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
           call, call_stack.size());
 
@@ -207,9 +240,12 @@ void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
     if (type != CLOSXP) {
         // TODO add support for buildsxp
         return;
-    } else {
-        state->add_trace(op, rho, result);
     }
+
+    // TODO: wrap all hooks
+    dyntrace_disable();
+    state->add_trace(op, rho, result);
+    dyntrace_enable();
 }
 
 void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
@@ -275,15 +311,20 @@ void initialize_globals() {
         add_origin = (AddOriginFun)R_GetCCallable("sxpdb", "add_origin_");
     }
 
+    if (!loadNamespaceFun) {
+        loadNamespaceFun =
+            get_or_load_binding(R_BaseEnv, Rf_install("loadNamespace"));
+
+        if (TYPEOF(loadNamespaceFun) != CLOSXP) {
+            Rf_error("Unable to get address of loadNamespace");
+        }
+    }
+
     if (blacklisted_funs.empty()) {
         for (int i = 0; i < sizeof(BLACKLISTED_FUNS) / sizeof(std::string);
              i++) {
-            SEXP fun = Rf_findVarInFrame(
+            SEXP fun = get_or_load_binding(
                 R_BaseEnv, Rf_install(BLACKLISTED_FUNS[i].c_str()));
-
-            if (TYPEOF(fun) == PROMSXP && PRVALUE(fun) != R_UnboundValue) {
-                fun = PRVALUE(fun);
-            }
 
             switch (TYPEOF(fun)) {
             case BUILTINSXP:
@@ -355,8 +396,6 @@ SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
     dyntrace_enable();
     dyntrace_result_t result = dyntrace_trace_code(tracer, code, rho);
     dyntrace_disable();
-
-    state.push_origins();
 
     return Rf_ScalarInteger(state.get_result());
 }

@@ -1,6 +1,19 @@
 #include "util.h"
 #include "debug.h"
 
+SEXP get_or_load_binding(SEXP env, SEXP binding) {
+    auto val = Rf_findVarInFrame3(env, binding, TRUE);
+
+    if (TYPEOF(val) == PROMSXP && PRVALUE(val) != R_UnboundValue) {
+        val = PRVALUE(val);
+    } else {
+        // if the binding has not yet been loaded, we force it now
+        val = Rf_eval(val, env);
+    }
+
+    return val;
+}
+
 std::optional<std::string> env_get_name(SEXP env) {
     if (R_IsPackageEnv(env) || R_IsNamespaceEnv(env)) {
         std::string name;
