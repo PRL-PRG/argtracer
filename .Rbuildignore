@@ -6,7 +6,7 @@
 ^.Rhistory$
 ^compile_commands.json$
 ^inst/tools$
-^inst/bench$
+^bench$
 ^LICENSE\.md$
 ^Makefile$
 ^README.md$

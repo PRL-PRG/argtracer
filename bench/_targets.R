@@ -2,10 +2,10 @@ library(tarchetypes)
 library(targets)
 library(tibble)
 
-R_VANILLA <- "../../../R-vanilla"
-R_DYNTRACE <- "../../../R-dyntrace"
-R_VANILLA_GDB <- "../../../R-vanilla-gdb"
-R_DYNTRACE_GDB <- "../../../R-dyntrace-gdb"
+R_VANILLA <- "../../R-vanilla"
+R_DYNTRACE <- "../../R-dyntrace"
+R_VANILLA_GDB <- "../../R-vanilla-gdb"
+R_DYNTRACE_GDB <- "../../R-dyntrace-gdb"
 
 R_VMS <- tribble(
     ~name, ~path,
