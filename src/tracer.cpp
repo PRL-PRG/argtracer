@@ -89,7 +89,7 @@ class TracerState {
 
     void add_trace_val(const std::string& pkg_name, const std::string& fun_name,
                        const std::string& param, SEXP val) {
-        add_val_origin(db_, val, pkg_name.c_str(), pkg_name.c_str(),
+        add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
                        param.c_str());
     }
 
