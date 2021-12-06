@@ -29,12 +29,10 @@ struct hash<FunOrigin> {
 };
 } // namespace std
 
-typedef SEXP (*AddValFun)(SEXP, SEXP);
-typedef SEXP (*AddOriginFun)(SEXP, const void*, const char*, const char*,
-                             const char*);
+typedef SEXP (*AddValOriginFun)(SEXP, SEXP, const char*, const char*,
+                                const char*);
 
-static AddValFun add_val = NULL;
-static AddOriginFun add_origin = NULL;
+static AddValOriginFun add_val_origin = NULL;
 bool is_freesxp(SEXP);
 
 std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "library", "loadNamespace",
@@ -65,8 +63,6 @@ class TracerState {
     SEXP db_;
     // the result of the tracing 0 - success, 1 - the code threw an exception
     int result_;
-    // a map of traces
-    std::unordered_map<FunOrigin, std::unordered_set<Trace>> traces_;
     // a depth of blacklisted functions
     int blacklist_stack_;
     // a call stack with both contexts and function calls
@@ -91,17 +87,10 @@ class TracerState {
 
     void set_result(int result) { result_ = result; }
 
-    void add_trace_val(FunOrigin fun, std::string param, SEXP val) {
-        SEXP hash_raw = add_val(db_, val);
-        if (hash_raw == R_NilValue) {
-            return;
-        }
-
-        SxpHash hash = XXH128_hashFromCanonical(
-            reinterpret_cast<XXH128_canonical_t*>(RAW(hash_raw)));
-
-        auto trace = std::make_pair(hash, param);
-        traces_[fun].insert(trace);
+    void add_trace_val(const std::string& pkg_name, const std::string& fun_name,
+                       const std::string& param, SEXP val) {
+        add_val_origin(db_, val, pkg_name.c_str(), pkg_name.c_str(),
+                       param.c_str());
     }
 
     void populate_namespace(SEXP env) {
@@ -179,14 +168,14 @@ class TracerState {
                 std::string param_name = CHAR(PRINTNAME(param_tag));
                 Debug("Recorded: %s::%s - %s\n", pkg_name.c_str(),
                       fun_name.c_str(), param_name.c_str());
-                //               add_trace_val(clo, param_name_str, param_val);
+                add_trace_val(pkg_name, fun_name, param_name, param_val);
             } else {
                 // TODO: fix dotdotdot
             }
         }
 
         if (result != R_UnboundValue) {
-            //            add_trace_val(clo, RETURN_PARAM_NAME, result);
+            add_trace_val(pkg_name, fun_name, RETURN_PARAM_NAME, result);
         }
     }
 };
@@ -304,11 +293,9 @@ void context_jump_callback(dyntracer_t* tracer, void* pointer,
 
 // TODO: move to a better place
 void initialize_globals() {
-    if (!add_val) {
-        add_val = (AddValFun)R_GetCCallable("sxpdb", "add_val");
-    }
-    if (!add_origin) {
-        add_origin = (AddOriginFun)R_GetCCallable("sxpdb", "add_origin_");
+    if (!add_val_origin) {
+        add_val_origin =
+            (AddValOriginFun)R_GetCCallable("sxpdb", "add_val_origin_");
     }
 
     if (!loadNamespaceFun) {
