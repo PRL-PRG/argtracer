@@ -14,35 +14,17 @@
 #include "tracer.h"
 #include "util.h"
 
-namespace std {
-template <>
-// TODO: generic template for std::pair
-struct hash<FunOrigin> {
-    size_t operator()(const FunOrigin& c) const {
-        size_t result = 0;
-        hash<string> str_hash;
-
-        hash_combine(result, str_hash(c.first));
-        hash_combine(result, str_hash(c.second));
-        return result;
-    }
-};
-} // namespace std
-
 typedef SEXP (*AddValOriginFun)(SEXP, SEXP, const char*, const char*,
                                 const char*);
 
 static AddValOriginFun add_val_origin = NULL;
-bool is_freesxp(SEXP);
 
+// list if functions that will be ignored
 std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "library", "loadNamespace",
                                   "require"};
 
 typedef struct {
-    SEXP call;
-    SEXP op;
-    SEXP args;
-    SEXP rho;
+    SEXP call, op, args, rho;
 } Call;
 
 typedef struct {
@@ -54,8 +36,8 @@ typedef std::variant<Call, Context> Frame;
 #define IS_CNTX(f) (f.index() == 1)
 
 // a map of resolved addresses of functions from BLACKLISTED_FUNS
-std::unordered_map<SEXP, std::string> blacklisted_funs;
-SEXP loadNamespaceFun = NULL;
+static std::unordered_map<SEXP, std::string> blacklisted_funs;
+static SEXP loadNamespaceFun = NULL;
 
 class TracerState {
   private:
@@ -71,6 +53,8 @@ class TracerState {
     std::unordered_map<SEXP, std::string> envirs_;
     // a map of known functions
     std::unordered_map<SEXP, std::string> funs_;
+    // a set of environments that shall be eventually loaded
+    std::unordered_set<SEXP> pending_;
 
   public:
     TracerState(SEXP db) : db_(db), result_(0), blacklist_stack_(0){};
@@ -108,18 +92,26 @@ class TracerState {
 
         envirs_[env] = *pkg_name;
 
-        auto bindings = PROTECT(R_lsInternal3(env, TRUE, FALSE));
+        auto values = PROTECT(env2list(env));
+        auto names = PROTECT(Rf_getAttrib(values, R_NamesSymbol));
 
         Debug("Populating %p: %s\n", env, (*pkg_name).c_str());
 
-        for (int i = 0; i < Rf_length(bindings); i++) {
-            auto binding = STRING_ELT(bindings, i);
-            std::string fun_name = CHAR(binding);
+        if (Rf_length(values) != Rf_length(names)) {
+            Rf_warning("Lengths do not match in env2list. Not loading: %s\n",
+                       (*pkg_name).c_str());
+            return;
+        }
 
-            auto fun = get_or_load_binding(env, Rf_installChar(binding));
+        for (int i = 0; i < Rf_length(names); i++) {
+            auto name = STRING_ELT(names, i);
+            std::string fun_name = CHAR(name);
+
+            auto fun = VECTOR_ELT(values, i);
 
             if (TYPEOF(fun) != CLOSXP) {
                 // only care about closures
+                Debug("%s is not a closure\n", fun_name.c_str());
                 continue;
             }
 
@@ -128,19 +120,38 @@ class TracerState {
             funs_[fun] = fun_name;
         }
 
-        UNPROTECT(1);
+        UNPROTECT(2);
+    }
+
+    std::optional<std::string> get_package_name(SEXP clo) {
+        SEXP env = CLOENV(clo);
+
+        auto env_key = envirs_.find(env);
+        if (env_key == envirs_.end()) {
+            if (pending_.find(env) != pending_.end()) {
+                populate_namespace(env);
+                pending_.erase(env);
+
+                return get_package_name(clo);
+            } else {
+                Debug("%p: not from a namespace\n", clo);
+
+                return {};
+            }
+        } else {
+            return env_key->second;
+        }
     }
 
     void add_trace(SEXP clo, SEXP rho, SEXP result) {
         Debug("Tracing %p\n", clo);
 
-        SEXP env = CLOENV(clo);
-        auto env_key = envirs_.find(env);
-        if (env_key == envirs_.end()) {
+        auto pkg_name_opt = get_package_name(clo);
+        if (!pkg_name_opt) {
             Debug("%p: not from a namespace\n", clo);
             return;
         }
-        auto pkg_name = env_key->second;
+        auto pkg_name = *pkg_name_opt;
 
         auto fun_key = funs_.find(clo);
         if (fun_key == funs_.end()) {
@@ -178,6 +189,8 @@ class TracerState {
             add_trace_val(pkg_name, fun_name, RETURN_PARAM_NAME, result);
         }
     }
+
+    void add_pending_namespace(SEXP env) { pending_.insert(env); }
 };
 
 void call_entry(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho) {
@@ -204,7 +217,7 @@ void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
     call_stack.pop();
 
     if (op == loadNamespaceFun && TYPEOF(result) == ENVSXP) {
-        state->populate_namespace(result);
+        state->add_pending_namespace(result);
     }
 
     Trace("%s<-- %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
@@ -237,8 +250,22 @@ void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
     dyntrace_enable();
 }
 
-void exit_callback(dyntracer_t* tracer, SEXP expression, SEXP environment,
-                   SEXP result, int error) {
+void tracing_start(dyntracer_t* tracer, SEXP expression, SEXP environment) {
+    dyntrace_disable();
+
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+
+    auto nss = PROTECT(env2list(R_NamespaceRegistry));
+    for (int i = 0; i < Rf_length(nss); i++) {
+        state->add_pending_namespace(VECTOR_ELT(nss, i));
+    }
+    UNPROTECT(1);
+
+    dyntrace_enable();
+}
+
+void tracing_end(dyntracer_t* tracer, SEXP expression, SEXP environment,
+                 SEXP result, int error) {
     auto state = (TracerState*)dyntracer_get_data(tracer);
     state->set_result(error);
 }
@@ -367,7 +394,8 @@ dyntracer_t* create_tracer() {
     dyntracer_set_context_exit_callback(tracer, &context_exit);
     dyntracer_set_context_jump_callback(tracer, &context_jump_callback);
 
-    dyntracer_set_dyntrace_exit_callback(tracer, &exit_callback);
+    dyntracer_set_dyntrace_entry_callback(tracer, &tracing_start);
+    dyntracer_set_dyntrace_exit_callback(tracer, &tracing_end);
 
     return tracer;
 }

@@ -1,46 +1,58 @@
-test_that("empty", with_tempdb("db", {
+test_with_db("empty", {
     trace_code(db, code = {})
     expect_equal(sxpdb::size_db(db), 0)
-}))
+})
 
-test_that("longjump", with_tempdb("db", {
-    trace_code(db, code = {
-        library(stringr)
-    })
+test_that("ignored functions", {
+    db_path <- tempfile()
+    on.exit(unlink(db_path, recursive = TRUE))
+
+    callr::r_copycat(
+        function(db_path) {
+            db <- sxpdb::open_db(db_path)
+            argtracer::trace_code(db, code = {
+                library(tools)
+            })
+            sxpdb::close_db(db)
+        },
+        list(db_path = db_path)
+    )
+
+    db <- sxpdb::open_db(db_path)
     expect_equal(sxpdb::size_db(db), 0)
-}))
+})
 
-test_that("basic test", with_tempdb("db", {
-  res <- trace_code(db, code = {
-    my_add <- function(x, y) {
-      paste(x, y)
-    }
+test_with_db("basic test", {
+    res <- trace_code(db, code = {
+        my_add <- function(x, y) {
+            paste(x, y)
+        }
 
-    my_add(1, 2)
-  })
+        my_add(1, 2)
+    })
 
-  expect_equal(res, 0)
+    expect_equal(res, 0)
 
-  expect_equal(sxpdb::size_db(db),  4)
+    expect_equal(sxpdb::size_db(db), 4)
 
-  origins <- do.call(rbind, sxpdb::view_origins_db(db))
+    origins <- do.call(rbind, sxpdb::view_origins_db(db))
 
-  expect_equal(unique(origins$package), "base")
-  expect_equal(
-    sort(unique(origins$`function`)),
-    c("isTRUE", "paste")
-  )
+    expect_equal(unique(origins$pkg), "base")
+    expect_equal(
+        sort(unique(origins$fun)),
+        c("isTRUE", "paste")
+    )
 
-  expect_equal(
-    sort(subset(origins, `function`=="paste")$argument),
-    c("collapse", "recycle0", "return", "sep")
-  )
+    expect_equal(
+        sort(subset(origins, fun == "paste")$param),
+        c("collapse", "recycle0", "return", "sep")
+    )
 
-  expect_equal(
-    sort(subset(origins, `function`=="isTRUE")$argument),
-    c("return", "x")
-  )
-}))
+    expect_equal(
+        sort(subset(origins, fun == "isTRUE")$param),
+        c("return", "x")
+    )
+})
 
 # test_that("db works with ...", {
 #   db_path <- tempdir()
