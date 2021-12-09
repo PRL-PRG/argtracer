@@ -150,27 +150,27 @@ class TracerState {
             SEXP param_tag = TAG(cons);
 
             if (param_tag == R_DotsSymbol) {
-                SEXP dd = Rf_findVarInFrame3(rho, param_tag, TRUE);
-                if (dd == R_UnboundValue) {
+                auto dd_arg = arg_val(Rf_findVarInFrame3(rho, param_tag, TRUE));
+                if (!dd_arg) {
                     continue;
                 }
 
-                int dd_idx = 1;
-                for (SEXP x = dd; x != R_NilValue; x = CDR(x), dd_idx++) {
-                    auto param_val = promise_val(CAR(x));
-                    if (param_val && (*param_val) != R_UnboundValue) {
-                        auto param_name = ".." + std::to_string(dd_idx);
-                        add_trace_val(pkg_name, fun_name, param_name,
-                                      *param_val);
+                int i = 1;
+                for (SEXP dd = *dd_arg; dd != R_NilValue; dd = CDR(dd), i++) {
+                    auto val = arg_val(CAR(dd));
+                    if (!val) {
+                        continue;
                     }
+                    auto param_name = ".." + std::to_string(i);
+                    add_trace_val(pkg_name, fun_name, param_name, *val);
                 }
             } else {
-                auto param_val =
-                    promise_val(Rf_findVarInFrame3(rho, param_tag, TRUE));
-                if (param_val && (*param_val) != R_UnboundValue) {
-                    std::string param_name = CHAR(PRINTNAME(param_tag));
-                    add_trace_val(pkg_name, fun_name, param_name, *param_val);
+                auto val = arg_val(Rf_findVarInFrame3(rho, param_tag, TRUE));
+                if (!val) {
+                    continue;
                 }
+                std::string param_name = CHAR(PRINTNAME(param_tag));
+                add_trace_val(pkg_name, fun_name, param_name, *val);
             }
         }
 
