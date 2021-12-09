@@ -56,21 +56,6 @@ class TracerState {
     // a set of environments that shall be eventually loaded
     std::unordered_set<SEXP> pending_;
 
-  public:
-    TracerState(SEXP db) : db_(db), result_(0), blacklist_stack_(0){};
-
-    int inc_blacklist_stack() { return ++blacklist_stack_; }
-
-    int dec_blacklist_stack() { return --blacklist_stack_; }
-
-    int get_blacklist_stack() { return blacklist_stack_; }
-
-    std::stack<Frame>& get_call_stack() { return call_stack_; }
-
-    int get_result() { return result_; }
-
-    void set_result(int result) { result_ = result; }
-
     void add_trace_val(const std::string& pkg_name, const std::string& fun_name,
                        const std::string& param, SEXP val) {
         add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
@@ -79,14 +64,14 @@ class TracerState {
 
     void populate_namespace(SEXP env) {
         if (envirs_.find(env) != envirs_.end()) {
-            Debug("Namespace: %p already loaded\n");
+            DEBUG("Namespace: %p already loaded\n");
             return;
         }
 
         auto pkg_name = env_get_name(env);
 
         if (!pkg_name) {
-            Debug("Environment: %p is not a namespace\n");
+            DEBUG("Environment: %p is not a namespace\n");
             return;
         }
 
@@ -95,7 +80,7 @@ class TracerState {
         auto values = PROTECT(env2list(env));
         auto names = PROTECT(Rf_getAttrib(values, R_NamesSymbol));
 
-        Debug("Populating %p: %s\n", env, (*pkg_name).c_str());
+        DEBUG("Populating %p: %s\n", env, (*pkg_name).c_str());
 
         if (Rf_length(values) != Rf_length(names)) {
             Rf_warning("Lengths do not match in env2list. Not loading: %s\n",
@@ -111,11 +96,11 @@ class TracerState {
 
             if (TYPEOF(fun) != CLOSXP) {
                 // only care about closures
-                Debug("%s is not a closure\n", fun_name.c_str());
+                TRACE("%s is not a closure\n", fun_name.c_str());
                 continue;
             }
 
-            Debug("Loaded %s::%s\n", (*pkg_name).c_str(), fun_name.c_str());
+            TRACE("Loaded %s::%s\n", (*pkg_name).c_str(), fun_name.c_str());
 
             funs_[fun] = fun_name;
         }
@@ -134,8 +119,6 @@ class TracerState {
 
                 return get_package_name(clo);
             } else {
-                Debug("%p: not from a namespace\n", clo);
-
                 return {};
             }
         } else {
@@ -144,18 +127,18 @@ class TracerState {
     }
 
     void add_trace(SEXP clo, SEXP rho, SEXP result) {
-        Debug("Tracing %p\n", clo);
+        DEBUG("Tracing %p\n", clo);
 
         auto pkg_name_opt = get_package_name(clo);
         if (!pkg_name_opt) {
-            Debug("%p: not from a namespace\n", clo);
+            DEBUG("%p: not from a namespace\n", clo);
             return;
         }
         auto pkg_name = *pkg_name_opt;
 
         auto fun_key = funs_.find(clo);
         if (fun_key == funs_.end()) {
-            Debug("%p: not a named closure\n", clo);
+            DEBUG("%p: not a named closure\n", clo);
             return;
         }
         auto fun_name = fun_key->second;
@@ -177,7 +160,7 @@ class TracerState {
                 }
 
                 std::string param_name = CHAR(PRINTNAME(param_tag));
-                Debug("Recorded: %s::%s - %s\n", pkg_name.c_str(),
+                DEBUG("Recorded: %s::%s - %s\n", pkg_name.c_str(),
                       fun_name.c_str(), param_name.c_str());
                 add_trace_val(pkg_name, fun_name, param_name, param_val);
             } else {
@@ -190,63 +173,145 @@ class TracerState {
         }
     }
 
+  public:
+    TracerState(SEXP db) : db_(db), result_(0), blacklist_stack_(0){};
+
+    int get_result() { return result_; }
+
+    void set_result(int result) { result_ = result; }
+
     void add_pending_namespace(SEXP env) { pending_.insert(env); }
+
+    void call_entry(SEXP call, SEXP op, SEXP args, SEXP rho) {
+        TRACE("%s--> %p (%d)\n",
+              std::string(2 * call_stack_.size(), ' ').c_str(), call,
+              call_stack_.size());
+
+        call_stack_.push(Frame(Call{call, op, args, rho}));
+
+        auto blacklist_fun = blacklisted_funs.find(op);
+        if (blacklist_fun != blacklisted_funs.end()) {
+            DEBUG("Entering ignored fun %s\n", blacklist_fun->second.c_str());
+            blacklist_stack_++;
+        }
+    }
+
+    void call_exit(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP result) {
+        call_stack_.pop();
+
+        if (op == loadNamespaceFun && TYPEOF(result) == ENVSXP) {
+            add_pending_namespace(result);
+        }
+
+        TRACE("%s<-- %p (%d)\n",
+              std::string(2 * call_stack_.size(), ' ').c_str(), call,
+              call_stack_.size());
+
+        auto blacklist_fun = blacklisted_funs.find(op);
+        if (blacklist_fun != blacklisted_funs.end()) {
+            blacklist_stack_--;
+
+            DEBUG("Exiting ignored fun %s (%d)\n",
+                  blacklist_fun->second.c_str(), blacklist_stack_);
+
+            return;
+        }
+
+        if (blacklist_stack_ != 0) {
+            return;
+        }
+
+        auto type = TYPEOF(op);
+
+        if (type != CLOSXP) {
+            // TODO add support for buildsxp
+            return;
+        }
+
+        add_trace(op, rho, result);
+    }
+
+    void context_entry(void* pointer) {
+        TRACE("%s==> %p (%d)\n",
+              std::string(2 * call_stack_.size(), ' ').c_str(), pointer,
+              call_stack_.size());
+
+        call_stack_.push(Frame(Context{pointer}));
+    }
+
+    void context_exit(void* pointer) {
+        TRACE("%s<== %p (%d) [%p]\n",
+              std::string(2 * (call_stack_.size() - 1), ' ').c_str(), pointer,
+              call_stack_.size() - 1,
+              std::get<Context>(call_stack_.top()).context);
+
+        call_stack_.pop();
+    }
+
+    void context_jump(void* pointer) {
+        TRACE("%sJUMP BEGIN (%p)\n",
+              std::string(2 * call_stack_.size(), ' ').c_str(), pointer);
+
+        while (!call_stack_.empty()) {
+            Frame f = call_stack_.top();
+            if (IS_CALL(f)) {
+                auto call = std::get<Call>(f);
+                call_exit(call.call, call.op, call.args, call.rho,
+                          R_UnboundValue);
+            } else if (IS_CNTX(f)) {
+                auto cntx = std::get<Context>(f);
+                if (cntx.context == pointer) {
+                    break;
+                } else {
+                    context_exit(cntx.context);
+                }
+            }
+        }
+
+        TRACE("%sJUMP END\n", std::string(2 * call_stack_.size(), ' ').c_str());
+    }
 };
 
 void call_entry(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho) {
     auto state = (TracerState*)dyntracer_get_data(tracer);
-    auto& call_stack = state->get_call_stack();
 
-    Trace("%s--> %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
-          call, call_stack.size());
-
-    call_stack.push(Frame(Call{call, op, args, rho}));
-
-    auto blacklist_fun = blacklisted_funs.find(op);
-    if (blacklist_fun != blacklisted_funs.end()) {
-        Debug("Entering ignored fun %s\n", blacklist_fun->second.c_str());
-        state->inc_blacklist_stack();
-    }
+    dyntrace_disable();
+    state->call_entry(call, op, args, rho);
+    dyntrace_enable();
 }
 
 void call_exit(dyntracer_t* tracer, SEXP call, SEXP op, SEXP args, SEXP rho,
                SEXP result) {
     auto state = (TracerState*)dyntracer_get_data(tracer);
-    auto& call_stack = state->get_call_stack();
 
-    call_stack.pop();
-
-    if (op == loadNamespaceFun && TYPEOF(result) == ENVSXP) {
-        state->add_pending_namespace(result);
-    }
-
-    Trace("%s<-- %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
-          call, call_stack.size());
-
-    auto blacklist_fun = blacklisted_funs.find(op);
-    if (blacklist_fun != blacklisted_funs.end()) {
-        state->dec_blacklist_stack();
-
-        Debug("Exiting ignored fun %s (%d)\n", blacklist_fun->second.c_str(),
-              state->get_blacklist_stack());
-
-        return;
-    }
-
-    if (state->get_blacklist_stack() != 0) {
-        return;
-    }
-
-    auto type = TYPEOF(op);
-
-    if (type != CLOSXP) {
-        // TODO add support for buildsxp
-        return;
-    }
-
-    // TODO: wrap all hooks
     dyntrace_disable();
-    state->add_trace(op, rho, result);
+    state->call_exit(call, op, args, rho, result);
+    dyntrace_enable();
+}
+
+void context_entry(dyntracer_t* tracer, void* pointer) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+
+    dyntrace_disable();
+    state->context_entry(pointer);
+    dyntrace_enable();
+}
+
+void context_exit(dyntracer_t* tracer, void* pointer) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+
+    dyntrace_disable();
+    state->context_exit(pointer);
+    dyntrace_enable();
+}
+
+void context_jump_callback(dyntracer_t* tracer, void* pointer,
+                           SEXP return_value, int restart) {
+    auto state = (TracerState*)dyntracer_get_data(tracer);
+
+    // TODO: handle return_value and restart
+    dyntrace_disable();
+    state->context_jump(pointer);
     dyntrace_enable();
 }
 
@@ -267,55 +332,10 @@ void tracing_start(dyntracer_t* tracer, SEXP expression, SEXP environment) {
 void tracing_end(dyntracer_t* tracer, SEXP expression, SEXP environment,
                  SEXP result, int error) {
     auto state = (TracerState*)dyntracer_get_data(tracer);
+
+    dyntrace_disable();
     state->set_result(error);
-}
-
-void context_entry(dyntracer_t* tracer, void* pointer) {
-    auto state = (TracerState*)dyntracer_get_data(tracer);
-    auto& call_stack = state->get_call_stack();
-
-    Trace("%s==> %p (%d)\n", std::string(2 * call_stack.size(), ' ').c_str(),
-          pointer, call_stack.size());
-
-    call_stack.push(Frame(Context{pointer}));
-}
-
-void context_exit(dyntracer_t* tracer, void* pointer) {
-    auto state = (TracerState*)dyntracer_get_data(tracer);
-    auto& call_stack = state->get_call_stack();
-
-    Trace("%s<== %p (%d) [%p]\n",
-          std::string(2 * (call_stack.size() - 1), ' ').c_str(), pointer,
-          call_stack.size() - 1, std::get<Context>(call_stack.top()).context);
-
-    call_stack.pop();
-}
-
-void context_jump_callback(dyntracer_t* tracer, void* pointer,
-                           SEXP return_value, int restart) {
-    auto state = (TracerState*)dyntracer_get_data(tracer);
-    auto& call_stack = state->get_call_stack();
-
-    Trace("%sJUMP BEGIN (%p)\n",
-          std::string(2 * call_stack.size(), ' ').c_str(), pointer);
-
-    while (!call_stack.empty()) {
-        Frame f = call_stack.top();
-        if (IS_CALL(f)) {
-            auto call = std::get<Call>(f);
-            call_exit(tracer, call.call, call.op, call.args, call.rho,
-                      R_UnboundValue);
-        } else if (IS_CNTX(f)) {
-            auto cntx = std::get<Context>(f);
-            if (cntx.context == pointer) {
-                break;
-            } else {
-                context_exit(tracer, cntx.context);
-            }
-        }
-    }
-
-    Trace("%sJUMP END\n", std::string(2 * call_stack.size(), ' ').c_str());
+    dyntrace_enable();
 }
 
 // TODO: move to a better place

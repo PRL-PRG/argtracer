@@ -4,19 +4,19 @@
 #include <Rinternals.h>
 #include <cstdio>
 
-#define Debug(...) printf("*** " __VA_ARGS__);
-#define Trace(...) printf(__VA_ARGS__);
+#define DEBUG(...) printf("debug: " __VA_ARGS__);
+#define TRACE(...) printf("trace: " __VA_ARGS__);
 
-#ifdef NDEBUG
-#undef Debug
-#define Debug(...)                                                             \
+#ifndef LOG_DEBUG
+#undef DEBUG
+#define DEBUG(...)                                                             \
     do {                                                                       \
     } while (0)
 #endif // NDEBUG
 
-#ifndef TRACE
-#undef Trace
-#define Trace(...)                                                             \
+#ifndef LOG_TRACE
+#undef TRACE
+#define TRACE(...)                                                             \
     do {                                                                       \
     } while (0)
 #endif
