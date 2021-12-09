@@ -56,8 +56,9 @@ class TracerState {
     // a set of environments that shall be eventually loaded
     std::unordered_set<SEXP> pending_;
 
-    void add_trace_val(const std::string& pkg_name, const std::string& fun_name,
-                       const std::string& param_name, SEXP val) {
+    inline void add_trace_val(const std::string& pkg_name,
+                              const std::string& fun_name,
+                              const std::string& param_name, SEXP val) {
         DEBUG("Recorded: %s::%s - %s\n", pkg_name.c_str(), fun_name.c_str(),
               param_name.c_str());
 
@@ -111,7 +112,7 @@ class TracerState {
         UNPROTECT(2);
     }
 
-    std::optional<std::string> get_package_name(SEXP clo) {
+    inline std::optional<std::string> get_package_name(SEXP clo) {
         SEXP env = CLOENV(clo);
 
         auto env_key = envirs_.find(env);
