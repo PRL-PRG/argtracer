@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+std::optional<SEXP> promise_val(SEXP promise);
 SEXP get_or_load_binding(SEXP env, SEXP binding);
 std::optional<std::string> env_get_name(SEXP);
 SEXP env2list(SEXP env);

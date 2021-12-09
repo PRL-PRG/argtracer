@@ -33,7 +33,7 @@ test_with_db("basic test", {
 
     expect_equal(res, 0)
 
-    expect_equal(sxpdb::size_db(db), 4)
+    expect_equal(sxpdb::size_db(db), 6)
 
     origins <- do.call(rbind, sxpdb::view_origins_db(db))
 
@@ -45,7 +45,7 @@ test_with_db("basic test", {
 
     expect_equal(
         sort(subset(origins, fun == "paste")$param),
-        c("collapse", "recycle0", "return", "sep")
+        c("..1", "..2", "collapse", "recycle0", "return", "sep")
     )
 
     expect_equal(

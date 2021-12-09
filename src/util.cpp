@@ -35,3 +35,16 @@ SEXP env2list(SEXP env) {
                             Rf_ScalarLogical(TRUE), Rf_ScalarLogical(FALSE)),
                    R_GlobalEnv);
 }
+
+std::optional<SEXP> promise_val(SEXP promise) {
+    if (TYPEOF(promise) == PROMSXP) {
+        SEXP val = PRVALUE(promise);
+        if (val != R_UnboundValue) {
+            return val;
+        } else {
+            return {};
+        }
+    } else {
+        return promise;
+    }
+}
