@@ -57,9 +57,12 @@ class TracerState {
     std::unordered_set<SEXP> pending_;
 
     void add_trace_val(const std::string& pkg_name, const std::string& fun_name,
-                       const std::string& param, SEXP val) {
+                       const std::string& param_name, SEXP val) {
+        DEBUG("Recorded: %s::%s - %s\n", pkg_name.c_str(), fun_name.c_str(),
+              param_name.c_str());
+
         add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
-                       param.c_str());
+                       param_name.c_str());
     }
 
     void populate_namespace(SEXP env) {
@@ -145,26 +148,29 @@ class TracerState {
 
         for (SEXP cons = FORMALS(clo); cons != R_NilValue; cons = CDR(cons)) {
             SEXP param_tag = TAG(cons);
-            if (param_tag != R_DotsSymbol) {
-                SEXP param_val = Rf_findVarInFrame3(rho, param_tag, TRUE);
-                if (param_val == R_UnboundValue) {
+
+            if (param_tag == R_DotsSymbol) {
+                SEXP dd = Rf_findVarInFrame3(rho, param_tag, TRUE);
+                if (dd == R_UnboundValue) {
                     continue;
                 }
 
-                if (TYPEOF(param_val) == PROMSXP) {
-                    if (PRVALUE(param_val) == R_UnboundValue) {
-                        continue;
-                    } else {
-                        param_val = PRVALUE(param_val);
+                int dd_idx = 1;
+                for (SEXP x = dd; x != R_NilValue; x = CDR(x), dd_idx++) {
+                    auto param_val = promise_val(CAR(x));
+                    if (param_val && (*param_val) != R_UnboundValue) {
+                        auto param_name = ".." + std::to_string(dd_idx);
+                        add_trace_val(pkg_name, fun_name, param_name,
+                                      *param_val);
                     }
                 }
-
-                std::string param_name = CHAR(PRINTNAME(param_tag));
-                DEBUG("Recorded: %s::%s - %s\n", pkg_name.c_str(),
-                      fun_name.c_str(), param_name.c_str());
-                add_trace_val(pkg_name, fun_name, param_name, param_val);
             } else {
-                // TODO: fix dotdotdot
+                auto param_val =
+                    promise_val(Rf_findVarInFrame3(rho, param_tag, TRUE));
+                if (param_val && (*param_val) != R_UnboundValue) {
+                    std::string param_name = CHAR(PRINTNAME(param_tag));
+                    add_trace_val(pkg_name, fun_name, param_name, *param_val);
+                }
             }
         }
 
