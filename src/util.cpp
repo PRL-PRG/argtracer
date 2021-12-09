@@ -36,15 +36,17 @@ SEXP env2list(SEXP env) {
                    R_GlobalEnv);
 }
 
-std::optional<SEXP> promise_val(SEXP promise) {
-    if (TYPEOF(promise) == PROMSXP) {
-        SEXP val = PRVALUE(promise);
+std::optional<SEXP> arg_val(SEXP arg) {
+    if (arg == R_UnboundValue || arg == R_MissingArg) {
+        return {};
+    } else if (TYPEOF(arg) == PROMSXP) {
+        SEXP val = PRVALUE(arg);
         if (val != R_UnboundValue) {
             return val;
         } else {
             return {};
         }
     } else {
-        return promise;
+        return arg;
     }
 }
