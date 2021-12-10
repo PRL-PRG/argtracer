@@ -1,5 +1,19 @@
-test_with_db("empty", {
-    trace_code(db, code = {})
+test_with_db("empty code produces empty db", {
+    ret <- trace_code(db, code = {})
+
+    expect_equal(ret$status, 0)
+    expect_equal(ret$result, NULL)
+    expect_equal(sxpdb::size_db(db), 0)
+})
+
+test_with_db("function not from package are ignored", {
+    ret <- trace_code(db, code = {
+        f <- function(x) x + 1
+        f(1)
+    })
+
+    expect_equal(ret$status, 0)
+    expect_equal(ret$result, 2)
     expect_equal(sxpdb::size_db(db), 0)
 })
 
@@ -7,31 +21,36 @@ test_that("ignored functions", {
     db_path <- tempfile()
     on.exit(unlink(db_path, recursive = TRUE))
 
-    callr::r_copycat(
+    ret <- callr::r_copycat(
         function(db_path) {
             db <- sxpdb::open_db(db_path)
-            argtracer::trace_code(db, code = {
+            ret <- argtracer::trace_code(db, code = {
                 library(tools)
             })
             sxpdb::close_db(db)
+            ret
         },
         list(db_path = db_path)
     )
+
+    expect_equal(ret$status, 0)
+    expect_equal(ret$result[1], "tools")
 
     db <- sxpdb::open_db(db_path)
     expect_equal(sxpdb::size_db(db), 0)
 })
 
 test_with_db("basic test", {
-    res <- trace_code(db, code = {
-        my_add <- function(x, y) {
+    ret <- trace_code(db, code = {
+        my_paste <- function(x, y) {
             paste(x, y)
         }
 
-        my_add(1, 2)
+        my_paste(1, 2)
     })
 
-    expect_equal(res, 0)
+    expect_equal(ret$status, 0)
+    expect_equal(ret$result[1], "1 2")
 
     expect_equal(sxpdb::size_db(db), 6)
 
@@ -52,6 +71,25 @@ test_with_db("basic test", {
         sort(subset(origins, fun == "isTRUE")$param),
         c("return", "x")
     )
+})
+
+test_with_db("error is OK", {
+    ret <- trace_code(db, {
+        stop("testing an error in tracing code")
+    })
+
+    expect_equal(ret$status, 1)
+    expect_equal(ret$result, NULL)
+})
+
+test_with_db("warning is OK", {
+    ret <- trace_code(db, {
+        warning("testing a warning in tracing code")
+        TRUE
+    })
+
+    expect_equal(ret$status, 0)
+    expect_equal(ret$result, TRUE)
 })
 
 # test_that("db works with ...", {
