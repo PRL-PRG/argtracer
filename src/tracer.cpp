@@ -120,6 +120,8 @@ class TracerState {
     std::unordered_map<SEXP, std::string> funs_;
     // a set of environments that shall be eventually loaded
     std::unordered_set<SEXP> pending_;
+    // whether to record or not
+    bool recording_ = true;
 
     inline void add_trace_val(const std::string& pkg_name,
                               const std::string& fun_name,
@@ -127,8 +129,10 @@ class TracerState {
         DEBUG("Recorded: %s::%s - %s\n", pkg_name.c_str(), fun_name.c_str(),
               param_name.c_str());
 
-        add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
-                       param_name.c_str());
+        if (recording_) {
+            add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
+                           param_name.c_str());
+        }
     }
 
     void populate_namespace(SEXP env) {
@@ -246,6 +250,8 @@ class TracerState {
 
   public:
     TracerState(SEXP db) : db_(db){};
+
+    void disable_recording() { recording_ = false; }
 
     void add_pending_namespace(SEXP env) { pending_.insert(env); }
 
@@ -477,6 +483,13 @@ SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
     dyntracer_t* tracer = create_tracer();
 
     TracerState state(db);
+
+    char* no_recording = getenv("ARGTRACER_NO_RECORDING");
+    if (no_recording != NULL) {
+        state.disable_recording();
+        Rprintf("Tracer will not record!\n");
+    }
+
     dyntracer_set_data(tracer, (void*)&state);
 
     dyntrace_enable();
