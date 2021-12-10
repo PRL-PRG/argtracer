@@ -90,7 +90,6 @@ const char* BLACKLISTED_FUNS[] = {"parent.frame",
                                   "undebug",
                                   "untrace"};
 
-
 typedef struct {
     SEXP call, op, args, rho;
 } Call;
@@ -165,7 +164,6 @@ class TracerState {
             auto fun = VECTOR_ELT(values, i);
 
             if (TYPEOF(fun) != CLOSXP) {
-                // only care about closures
                 TRACE("%s is not a closure\n", fun_name.c_str());
                 continue;
             }
@@ -252,8 +250,7 @@ class TracerState {
     void add_pending_namespace(SEXP env) { pending_.insert(env); }
 
     void call_entry(SEXP call, SEXP op, SEXP args, SEXP rho) {
-        TRACE("%s--> %p (%d)\n",
-              std::string(2 * call_stack_.size(), ' ').c_str(), call,
+        TRACE("%s--> %p (%lu)\n", INDENT(call_stack_.size()), call,
               call_stack_.size());
 
         call_stack_.push(Frame(Call{call, op, args, rho}));
@@ -272,8 +269,7 @@ class TracerState {
             add_pending_namespace(result);
         }
 
-        TRACE("%s<-- %p (%d)\n",
-              std::string(2 * call_stack_.size(), ' ').c_str(), call,
+        TRACE("%s<-- %p (%lu)\n", INDENT(call_stack_.size()), call,
               call_stack_.size());
 
         auto blacklist_fun = blacklisted_funs.find(op);
@@ -301,16 +297,14 @@ class TracerState {
     }
 
     void context_entry(void* pointer) {
-        TRACE("%s==> %p (%d)\n",
-              std::string(2 * call_stack_.size(), ' ').c_str(), pointer,
+        TRACE("%s==> %p (%lu)\n", INDENT(call_stack_.size()), pointer,
               call_stack_.size());
 
         call_stack_.push(Frame(Context{pointer}));
     }
 
     void context_exit(void* pointer) {
-        TRACE("%s<== %p (%d) [%p]\n",
-              std::string(2 * (call_stack_.size() - 1), ' ').c_str(), pointer,
+        TRACE("%s<== %p (%lu) [%p]\n", INDENT(call_stack_.size() - 1), pointer,
               call_stack_.size() - 1,
               std::get<Context>(call_stack_.top()).context);
 
@@ -318,8 +312,7 @@ class TracerState {
     }
 
     void context_jump(void* pointer) {
-        TRACE("%sJUMP BEGIN (%p)\n",
-              std::string(2 * call_stack_.size(), ' ').c_str(), pointer);
+        TRACE("%sJUMP BEGIN (%p)\n", INDENT(call_stack_.size()), pointer);
 
         while (!call_stack_.empty()) {
             Frame f = call_stack_.top();
@@ -337,7 +330,7 @@ class TracerState {
             }
         }
 
-        TRACE("%sJUMP END\n", std::string(2 * call_stack_.size(), ' ').c_str());
+        TRACE("%sJUMP END\n", INDENT(call_stack_.size()));
     }
 };
 

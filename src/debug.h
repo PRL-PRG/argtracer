@@ -21,4 +21,6 @@
     } while (0)
 #endif
 
+#define INDENT(n) (std::string(2 * n, ' ').c_str())
+
 #endif // DEBUG_H
