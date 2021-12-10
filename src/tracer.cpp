@@ -43,8 +43,6 @@ class TracerState {
   private:
     // the SEXP database
     SEXP db_;
-    // the result of the tracing 0 - success, 1 - the code threw an exception
-    int result_;
     // a depth of blacklisted functions
     int blacklist_stack_;
     // a call stack with both contexts and function calls
@@ -181,11 +179,7 @@ class TracerState {
     }
 
   public:
-    TracerState(SEXP db) : db_(db), result_(0), blacklist_stack_(0){};
-
-    int get_result() { return result_; }
-
-    void set_result(int result) { result_ = result; }
+    TracerState(SEXP db) : db_(db), blacklist_stack_(0){};
 
     void add_pending_namespace(SEXP env) { pending_.insert(env); }
 
@@ -336,15 +330,6 @@ void tracing_start(dyntracer_t* tracer, SEXP expression, SEXP environment) {
     dyntrace_enable();
 }
 
-void tracing_end(dyntracer_t* tracer, SEXP expression, SEXP environment,
-                 SEXP result, int error) {
-    auto state = (TracerState*)dyntracer_get_data(tracer);
-
-    dyntrace_disable();
-    state->set_result(error);
-    dyntrace_enable();
-}
-
 // TODO: move to a better place
 void initialize_globals() {
     if (!add_val_origin) {
@@ -422,7 +407,6 @@ dyntracer_t* create_tracer() {
     dyntracer_set_context_jump_callback(tracer, &context_jump_callback);
 
     dyntracer_set_dyntrace_entry_callback(tracer, &tracing_start);
-    dyntracer_set_dyntrace_exit_callback(tracer, &tracing_end);
 
     return tracer;
 }
@@ -439,5 +423,11 @@ SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
     dyntrace_result_t result = dyntrace_trace_code(tracer, code, rho);
     dyntrace_disable();
 
-    return Rf_ScalarInteger(state.get_result());
+    const char* names[] = {"status", "result", ""};
+    SEXP ret = PROTECT(Rf_mkNamed(VECSXP, names));
+    SET_VECTOR_ELT(ret, 0, Rf_ScalarInteger(result.error_code));
+    SET_VECTOR_ELT(ret, 1, result.error_code == 0 ? result.value : R_NilValue);
+    UNPROTECT(1);
+
+    return ret;
 }

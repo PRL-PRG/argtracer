@@ -24,7 +24,8 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb")) {
         {
             code <- parse(file = file)
             code <- as.call(c(`{`, code))
-            time <- system.time(status <- trace_code(db, code, quote = FALSE))
+            time <- system.time(ret <- trace_code(db, code, quote = FALSE))
+            status <- ret$status
             db_size <- sxpdb::size_db(db)
         },
         error = function(e) {
