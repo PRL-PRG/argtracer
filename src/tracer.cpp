@@ -111,7 +111,7 @@ class TracerState {
     // the SEXP database
     SEXP db_;
     // a depth of blacklisted functions
-    int blacklist_stack_;
+    int blacklist_stack_ = 0;
     // a call stack with both contexts and function calls
     std::stack<Frame> call_stack_;
     // a map of seen environments
@@ -133,14 +133,14 @@ class TracerState {
 
     void populate_namespace(SEXP env) {
         if (envirs_.find(env) != envirs_.end()) {
-            DEBUG("Namespace: %p already loaded\n");
+            DEBUG("Namespace: %p already loaded\n", env);
             return;
         }
 
         auto pkg_name = env_get_name(env);
 
         if (!pkg_name) {
-            DEBUG("Environment: %p is not a namespace\n");
+            DEBUG("Environment: %p is not a namespace\n", env);
             return;
         }
 
@@ -245,7 +245,7 @@ class TracerState {
     }
 
   public:
-    TracerState(SEXP db) : db_(db), blacklist_stack_(0){};
+    TracerState(SEXP db) : db_(db){};
 
     void add_pending_namespace(SEXP env) { pending_.insert(env); }
 
