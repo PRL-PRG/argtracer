@@ -19,9 +19,77 @@ typedef SEXP (*AddValOriginFun)(SEXP, SEXP, const char*, const char*,
 
 static AddValOriginFun add_val_origin = NULL;
 
-// list if functions that will be ignored
-std::string BLACKLISTED_FUNS[] = {"lazyLoadDBfetch", "library", "loadNamespace",
-                                  "require"};
+const char* BLACKLISTED_FUNS[] = {"parent.frame",
+                                  "sys.calls",
+                                  "sys.frame",
+                                  "sys.frames",
+                                  "sys.function",
+                                  "sys.nframe",
+                                  "sys.on.exit",
+                                  "sys.parent",
+                                  "sys.parents",
+                                  "sys.status",
+                                  "::",
+                                  ":::",
+                                  "asNamespace",
+                                  "asNamespace",
+                                  "attachNamespace",
+                                  "detach",
+                                  "dyn.load",
+                                  "dyn.unload",
+                                  "getCallingDLL",
+                                  "getHook",
+                                  "getLoadedDLLs",
+                                  "getNamespace",
+                                  "getNamespaceExports",
+                                  "getNamespaceImports",
+                                  "getNamespaceInfo",
+                                  "getNamespaceName",
+                                  "getNamespaceUsers",
+                                  "getNamespaceVersion",
+                                  "isBaseNamespace",
+                                  "isNamespace",
+                                  "isNamespaceLoaded",
+                                  "lazyLoadDBfetch",
+                                  "library",
+                                  "loadNamespace",
+                                  "loadedNamespaces",
+                                  "loadingNamespaceInfo",
+                                  "namespaceExport",
+                                  "namespaceImport",
+                                  "namespaceImportClasses",
+                                  "namespaceImportFrom",
+                                  "namespaceImportMethods",
+                                  "packageEvent",
+                                  "packageHasNamespace",
+                                  "packageNotFoundError",
+                                  "packageStartupMessage",
+                                  "parseNamespaceFile",
+                                  "require",
+                                  "requireNamespace",
+                                  "setHook",
+                                  "setNamespaceInfo",
+                                  "unlockBinding",
+                                  "unloadNamespace",
+                                  "sys.call",
+                                  "trace",
+                                  "$.DLLInfo",
+                                  "debug",
+                                  "debugonce",
+                                  "getCallingDLLe",
+                                  "getDLLRegisteredRoutines",
+                                  "getDLLRegisteredRoutines.DLLInfo",
+                                  "getDLLRegisteredRoutines.character",
+                                  "is.loaded",
+                                  "isdebugged",
+                                  "lazyLoad",
+                                  "library.dynam",
+                                  "library.dynam.unload",
+                                  "lockBinding",
+                                  "lockEnvironment",
+                                  "undebug",
+                                  "untrace"};
+
 
 typedef struct {
     SEXP call, op, args, rho;
@@ -347,10 +415,9 @@ void initialize_globals() {
     }
 
     if (blacklisted_funs.empty()) {
-        for (int i = 0; i < sizeof(BLACKLISTED_FUNS) / sizeof(std::string);
-             i++) {
-            SEXP fun = get_or_load_binding(
-                R_BaseEnv, Rf_install(BLACKLISTED_FUNS[i].c_str()));
+        for (int i = 0; i < sizeof(BLACKLISTED_FUNS) / sizeof(char*); i++) {
+            SEXP fun =
+                get_or_load_binding(R_BaseEnv, Rf_install(BLACKLISTED_FUNS[i]));
 
             switch (TYPEOF(fun)) {
             case BUILTINSXP:
@@ -361,7 +428,7 @@ void initialize_globals() {
                 break;
             default:
                 Rf_error("Unable to load blacklisted function %s\n",
-                         BLACKLISTED_FUNS[i].c_str());
+                         BLACKLISTED_FUNS[i]);
             }
         }
     }
