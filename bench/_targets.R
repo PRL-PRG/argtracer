@@ -57,7 +57,8 @@ list(
             runr::install_cran_packages(
                 packages_to_install,
                 lib_dir,
-                r_home = R_VANILLA
+                r_home = R_DYNTRACE,
+                check = TRUE
             ) %>% pull(dir)
         },
         format = "file"
