@@ -321,13 +321,13 @@ class TracerState {
         TRACE("%sJUMP BEGIN (%p)\n", INDENT(call_stack_.size()), pointer);
 
         while (!call_stack_.empty()) {
-            Frame f = call_stack_.top();
+            const auto& f = call_stack_.top();
             if (IS_CALL(f)) {
-                auto call = std::get<Call>(f);
+                const auto& call = std::get<Call>(f);
                 call_exit(call.call, call.op, call.args, call.rho,
                           R_UnboundValue);
             } else if (IS_CNTX(f)) {
-                auto cntx = std::get<Context>(f);
+                const auto& cntx = std::get<Context>(f);
                 if (cntx.context == pointer) {
                     break;
                 } else {
