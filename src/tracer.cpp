@@ -180,33 +180,27 @@ class TracerState {
         UNPROTECT(2);
     }
 
-    inline std::optional<std::string> get_package_name(SEXP clo) {
-        SEXP env = CLOENV(clo);
-
+    inline void load_package_name(SEXP env) {
         auto env_key = envirs_.find(env);
-        if (env_key == envirs_.end()) {
-            if (pending_.find(env) != pending_.end()) {
-                populate_namespace(env);
-                pending_.erase(env);
+        if (env_key != envirs_.end()) {
+            return;
+        }
 
-                return get_package_name(clo);
-            } else {
-                return {};
-            }
-        } else {
-            return env_key->second;
+        if (pending_.find(env) != pending_.end()) {
+            populate_namespace(env);
+            pending_.erase(env);
         }
     }
 
     void add_trace(SEXP clo, SEXP rho, SEXP result) {
         DEBUG("Tracing %p\n", clo);
 
-        auto pkg_name_opt = get_package_name(clo);
-        if (!pkg_name_opt) {
+        auto pkg_key = envirs_.find(CLOENV(clo));
+        if (pkg_key == envirs_.end()) {
             DEBUG("%p: not from a namespace\n", clo);
             return;
         }
-        auto pkg_name = *pkg_name_opt;
+        auto pkg_name = pkg_key->second;
 
         auto fun_key = funs_.find(clo);
         if (fun_key == funs_.end()) {
@@ -265,6 +259,8 @@ class TracerState {
         if (blacklist_fun != blacklisted_funs.end()) {
             DEBUG("Entering ignored fun %s\n", blacklist_fun->second.c_str());
             blacklist_stack_++;
+        } else {
+            load_package_name(CLOENV(op));
         }
     }
 
