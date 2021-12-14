@@ -1,4 +1,5 @@
 BEAR := $(shell command -v bear 2> /dev/null)
+R    ?= R
 
 ifdef BEAR
 	BEAR := $(BEAR) --
@@ -9,10 +10,10 @@ endif
 all: install
 
 build: document
-	R CMD build .
+	$(R) CMD build .
 
 check: build
-	R CMD check argtracer*tar.gz
+	$(R) CMD check argtracer*tar.gz
 
 clean:
 	-rm -f argtracer*tar.gz
@@ -21,10 +22,10 @@ clean:
 	-rm -rf tests/testthat/test_db/*
 
 document:
-	R -e 'devtools::document()'
+	$(R) -e 'devtools::document()'
 
 test:
-	R -e 'devtools::test()'
+	$(R) -e 'devtools::test()'
 
 install: clean
-	$(BEAR) R CMD INSTALL .
+	$(BEAR) $(R) CMD INSTALL .
