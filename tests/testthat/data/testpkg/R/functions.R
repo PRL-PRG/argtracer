@@ -34,3 +34,11 @@ f_error <- function(x, y) {
         y
     }
 }
+
+f_return <- function(x, y) {
+    if (x) {
+        return(y+1L)
+    } else {
+        0L
+    }
+}

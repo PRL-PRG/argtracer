@@ -1,5 +1,20 @@
 devtools::load_all("data/testpkg")
 
+test_with_db("test context jumps", {
+    ret <- trace_code(db, {
+        testpkg:::f_return(TRUE, 1L)
+    })
+    expect_equal(ret$status, 0L)
+    expect_equal(ret$result, 2L)
+    expect_equal(sxpdb::size_db(db), 3L)
+
+    origins <- do.call(rbind, sxpdb::view_origins_db(db))
+
+    expect_equal(unique(origins$pkg), "testpkg")
+    expect_equal(unique(origins$fun), "f_return")
+    expect_equal(sort(origins$param), c("return", "x", "y"))
+})
+
 test_with_db("empty code produces empty db", {
     ret <- trace_code(db, code = {})
 

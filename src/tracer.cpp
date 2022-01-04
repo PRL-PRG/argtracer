@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <array>
-#include <stack>
+#include <deque>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -113,7 +113,7 @@ class TracerState {
     // a depth of blacklisted functions
     int blacklist_stack_ = 0;
     // a call stack with both contexts and function calls
-    std::stack<Frame> call_stack_;
+    std::deque<Frame> call_stack_;
     // a map of seen environments
     std::unordered_map<SEXP, std::string> envirs_;
     // a map of known functions
@@ -253,7 +253,7 @@ class TracerState {
         TRACE("%s--> %p (%lu)\n", INDENT(call_stack_.size()), call,
               call_stack_.size());
 
-        call_stack_.push(Frame(Call{call, op, args, rho}));
+        call_stack_.push_back(Frame(Call{call, op, args, rho}));
 
         auto blacklist_fun = blacklisted_funs.find(op);
         if (blacklist_fun != blacklisted_funs.end()) {
@@ -265,7 +265,7 @@ class TracerState {
     }
 
     void call_exit(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP result) {
-        call_stack_.pop();
+        call_stack_.pop_back();
 
         if (op == loadNamespaceFun && TYPEOF(result) == ENVSXP) {
             add_pending_namespace(result);
@@ -302,26 +302,35 @@ class TracerState {
         TRACE("%s==> %p (%lu)\n", INDENT(call_stack_.size()), pointer,
               call_stack_.size());
 
-        call_stack_.push(Frame(Context{pointer}));
+        call_stack_.push_back(Frame(Context{pointer}));
     }
 
     void context_exit(void* pointer) {
         TRACE("%s<== %p (%lu) [%p]\n", INDENT(call_stack_.size() - 1), pointer,
               call_stack_.size() - 1,
-              std::get<Context>(call_stack_.top()).context);
+              std::get<Context>(call_stack_.back()).context);
 
-        call_stack_.pop();
+        call_stack_.pop_back();
     }
 
-    void context_jump(void* pointer) {
+    void context_jump(void* pointer, SEXP retval, int restart) {
         TRACE("%sJUMP BEGIN (%p)\n", INDENT(call_stack_.size()), pointer);
 
         while (!call_stack_.empty()) {
-            const auto& f = call_stack_.top();
+            const auto& f = call_stack_.back();
             if (IS_CALL(f)) {
                 const auto& call = std::get<Call>(f);
-                call_exit(call.call, call.op, call.args, call.rho,
-                          R_UnboundValue);
+                SEXP call_retval = R_UnboundValue;
+
+                if (!restart && call_stack_.size() >= 2) {
+                    const auto& next = call_stack_[call_stack_.size() - 2];
+                    if (IS_CNTX(next) &&
+                        std::get<Context>(next).context == pointer) {
+                        call_retval = retval;
+                    }
+                }
+
+                call_exit(call.call, call.op, call.args, call.rho, call_retval);
             } else if (IS_CNTX(f)) {
                 const auto& cntx = std::get<Context>(f);
                 if (cntx.context == pointer) {
@@ -369,13 +378,12 @@ void context_exit(dyntracer_t* tracer, void* pointer) {
     dyntrace_enable();
 }
 
-void context_jump_callback(dyntracer_t* tracer, void* pointer,
-                           SEXP return_value, int restart) {
+void context_jump_callback(dyntracer_t* tracer, void* pointer, SEXP retval,
+                           int restart) {
     auto state = (TracerState*)dyntracer_get_data(tracer);
 
-    // TODO: handle return_value and restart
     dyntrace_disable();
-    state->context_jump(pointer);
+    state->context_jump(pointer, retval, restart);
     dyntrace_enable();
 }
 
