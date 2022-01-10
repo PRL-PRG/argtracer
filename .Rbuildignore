@@ -5,8 +5,9 @@
 ^.RDara$
 ^.Rhistory$
 ^compile_commands.json$
-^inst/tools$
-^bench$
+^inst/tools/
+^bench/
 ^LICENSE\.md$
 ^Makefile$
 ^README.md$
+^tests/itest/

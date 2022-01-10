@@ -27,5 +27,8 @@ document:
 test:
 	$(R) -e 'devtools::test()'
 
+itest:
+	$(MAKE) -C tests/itest
+
 install: clean
 	$(BEAR) $(R) CMD INSTALL .

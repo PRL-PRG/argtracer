@@ -18,7 +18,15 @@ LinkingTo:
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Suggests:
+    DT,
     callr,
-    testthat,
+    dplyr,
+    future,
+    future.callr,
+    runr,
+    tarchetypes,
     targets,
-    runr
+    testthat
+Remotes:
+    PRL-PRG/runr,
+    PRL-PRG/sxpdb
