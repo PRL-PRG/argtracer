@@ -1,0 +1,20 @@
+---
+title: "argtracer integration test"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(targets)
+library(dplyr)
+library(DT)
+```
+
+## Trace results
+
+```{r}
+res <- tar_read(programs_trace)
+datatable(res)
+```
