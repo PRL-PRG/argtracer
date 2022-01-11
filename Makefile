@@ -30,5 +30,16 @@ test:
 itest:
 	$(MAKE) -C tests/itest
 
+itest-docker:
+	docker run \
+	    -ti --rm \
+        -v $$(pwd):/argtracer \
+        -e TZ=/usr/share/zoneinfo/Europe/Prague \
+        -e OUT_DIR=/tmp/out \
+        -e LIB_DIR=/R/R-dyntrace/library \
+        -e PKG_DIR=/CRAN/extracted \
+        prlprg/argtracer \
+        make -C /argtracer/tests/itest
+
 install: clean
 	$(BEAR) $(R) CMD INSTALL .

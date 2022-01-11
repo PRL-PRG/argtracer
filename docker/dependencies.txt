@@ -1,0 +1,13 @@
+DT
+callr
+devtools
+dplyr
+future
+future.callr
+lubridate
+readr
+tarchetypes
+targets
+testthat
+tzdb
+vroom
