@@ -21,7 +21,11 @@ R_ENVIR <- c(
 # maximum time allowed for a program to run in seconds
 TIMEOUT <- 5 * 60
 SPLIT_TESTTHAT_TESTS <- TRUE
-OUT_DIR <- "out"
+OUT_DIR <- Sys.getenv("OUT_DIR", "out")
+LIB_DIR <- Sys.getenv("LIB_DIR", file.path(OUT_DIR, "library"))
+PKG_DIR <- Sys.getenv("PKG_DIR", file.path(OUT_DIR, "packages", "extracted"))
+PROGRAMS_DIR <- Sys.getenv("PROGRAMS_DIR", file.path(OUT_DIR, "programs"))
+
 # packages to test
 CORPUS <- c("dplyr")
 
@@ -31,22 +35,18 @@ tar_option_set(
 
 plan(callr)
 
+print(OUT_DIR)
+print(LIB_DIR)
+print(PKG_DIR)
+print(PROGRAMS_DIR)
+
 list(
-    tar_target(lib_dir, create_dir(OUT_DIR, "library"), format="file"),
-    tar_target(pkg_dir, create_dir(OUT_DIR, "packages", "extracted"), format="file"),
-    tar_target(programs_dir, create_dir(OUT_DIR, "programs"), format="file"),
+    tar_target(lib_dir, create_dir(LIB_DIR), format="file"),
+    tar_target(pkg_dir, create_dir(PKG_DIR), format="file"),
+    tar_target(programs_dir, create_dir(PROGRAMS_DIR), format="file"),
     tar_target(
-        sxpdb_,
+        pkg_argtracer,
         {
-            devtools::install_github("PRL-PRG/sxpdb", lib = lib_dir)
-            file.path(lib_dir, "sxpdb")
-        },
-        format = "file"
-    ),
-    tar_target(
-        argtracer_,
-        {
-            sxpdb_
             withr::with_libpaths(lib_dir, devtools::install_local(path = "../.."))
             file.path(lib_dir, "argtracer")
         },
@@ -58,7 +58,7 @@ list(
             runr::install_cran_packages(
                 CORPUS,
                 lib_dir,
-                dependencies = c("Depends", "Imports", "LinkingTo"),
+                dependencies = TRUE,
                 check = TRUE
             ) %>% pull(dir)
         },
@@ -133,7 +133,7 @@ list(
     tar_target(
         programs_trace,
         {
-            argtracer_
+            pkg_argtracer
             tmp_db <- tempfile(fileext = ".sxpdb")
             file <- normalizePath(programs_files_)
             withr::defer(unlink(tmp_db, recursive = TRUE))
