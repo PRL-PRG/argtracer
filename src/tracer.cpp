@@ -322,7 +322,8 @@ class TracerState {
                 const auto& call = std::get<Call>(f);
                 SEXP call_retval = R_UnboundValue;
 
-                if (!restart && call_stack_.size() >= 2) {
+                // jumo_to_top_ex calls R_jumpctxt with retval=NULL
+                if (!restart && retval != NULL && call_stack_.size() >= 2) {
                     const auto& next = call_stack_[call_stack_.size() - 2];
                     if (IS_CNTX(next) &&
                         std::get<Context>(next).context == pointer) {
