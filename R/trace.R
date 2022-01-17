@@ -12,7 +12,7 @@ trace_code <- function(db, code, quote = TRUE,
 
 #' @export
 #' @importFrom sxpdb open_db close_db
-trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb")) {
+trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environment = parent.frame()) {
     db <- sxpdb::open_db(db_path)
 
     time <- c("elapsed" = NA)
@@ -24,7 +24,7 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb")) {
         {
             code <- parse(file = file)
             code <- as.call(c(`{`, code))
-            time <- system.time(ret <- trace_code(db, code, quote = FALSE))
+            time <- system.time(ret <- trace_code(db, code, quote = FALSE, environment = environment))
             status <- ret$status
             db_size <- sxpdb::size_db(db)
         },
@@ -43,10 +43,10 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb")) {
                db_path = db_path, db_size = db_size, error = error)
 }
 
-test_trace_file <- function(file) {
+test_trace_file <- function(file, environment = parent.frame()) {
     db_path <- tempfile(fileext = ".sxpdb")
     cat("*** Temp DB path: ", db_path, "\n")
-    trace_file(file, db_path)
+    trace_file(file, db_path, environment = environment)
 }
 
 test_trace_code <- function(code) {
