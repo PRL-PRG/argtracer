@@ -1,5 +1,5 @@
-^\.cache$
-^\.clangd$
+^\.cache/
+^\.clangd/
 ^\.clang-format$
 ^\.gdb_history$
 ^.RDara$
@@ -10,4 +10,5 @@
 ^LICENSE\.md$
 ^Makefile$
 ^README.md$
-^tests/itest/
+^tests/itest[^/]*/out
+.*/\.Rdata$

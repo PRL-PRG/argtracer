@@ -96,6 +96,6 @@ po/*~
 /bench/_targets/
 /bench/out/
 compile_commands.json
-/tests/itest/out/
-/tests/itest/_targets/
-/tests/itest/*.html
+/tests/itest*/out/
+/tests/itest*/_targets/
+/tests/itest*/*.html
