@@ -13,7 +13,7 @@ trace_code <- function(db, code, quote = TRUE,
 #' @export
 #' @importFrom sxpdb open_db close_db
 trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environment = parent.frame()) {
-    db <- sxpdb::open_db(db_path)
+    db <- sxpdb::open_db(db_path, write_mode = TRUE, quiet = TRUE)
 
     time <- c("elapsed" = NA)
     status <- NA
@@ -39,8 +39,10 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environ
 
     sxpdb::close_db(db)
 
-    data.frame(status = status, time = time, file = file,
-               db_path = db_path, db_size = db_size, error = error)
+    data.frame(
+        status = status, time = time, file = file,
+        db_path = db_path, db_size = db_size, error = error
+    )
 }
 
 test_trace_file <- function(file, environment = parent.frame()) {
