@@ -11,8 +11,9 @@ define GH_REPO_LAST_COMMIT
 $(shell 2>/dev/null curl -s 'https://api.github.com/repos/$(1)/commits$(2)' | 2>/dev/null jq -r '.[0].sha' || echo 'HEAD')
 endef
 
-RUNR_COMMIT  ?= $(call GH_REPO_LAST_COMMIT,PRL-PRG/runr)
-SXPDB_COMMIT ?= $(call GH_REPO_LAST_COMMIT,PRL-PRG/sxpdb)
+RUNR_COMMIT      ?= $(call GH_REPO_LAST_COMMIT,PRL-PRG/runr)
+SXPDB_COMMIT     ?= $(call GH_REPO_LAST_COMMIT,PRL-PRG/sxpdb)
+ARGTRACER_COMMIT ?= $(call GH_REPO_LAST_COMMIT,PRL-PRG/argtracer)
 
 .PHONY: all
 all: image
@@ -24,6 +25,7 @@ image: $(DEPENDENCIES_TXT)
 		--build-arg DEPENDENCIES_TXT=$(DEPENDENCIES_TXT) \
 		--build-arg RUNR_COMMIT=$(RUNR_COMMIT) \
 		--build-arg SXPDB_COMMIT=$(SXPDB_COMMIT) \
+		--build-arg ARGTRACER_COMMIT=$(ARGTRACER_COMMIT) \
     --rm \
     -t $(DOCKER_IMAGE_NAME) \
     .
