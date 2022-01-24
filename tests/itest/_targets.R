@@ -33,9 +33,9 @@ tar_option_set(
     packages = c("DT", "devtools", "dplyr", "runr"),
 )
 
-tar_config_set(
-    store = file.path(OUT_DIR, "_targets")
-)
+# tar_config_set(
+#     store = file.path(OUT_DIR, "_targets")
+# )
 
 plan(callr)
 

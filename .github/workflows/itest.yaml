@@ -1,0 +1,24 @@
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+name: itest
+
+jobs:
+  itest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run integration test
+        uses: docker://prlprg/argtracer:latest
+        with:
+            args: sudo make itest PKG_DIR=/R/packages LIB_DIR=/R/library
+
+      - name: Upload report
+        uses: actions/upload-artifact@v2
+        with:
+          name: report
+          path: tests/itest/report.html
