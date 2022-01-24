@@ -7,4 +7,4 @@ run:
 	$(R) -e 'targets::tar_make_future(workers=parallel::detectCores())'
 
 clean:
-	rm -fr $(OUT_DIR) _targets
+	rm -fr $(OUT_DIR)
