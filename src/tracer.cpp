@@ -192,7 +192,31 @@ class TracerState {
         }
     }
 
-    void add_trace(SEXP clo, SEXP rho, SEXP result) {
+    void trace_builtin_call(SEXP op, SEXP args, SEXP rho, SEXP result) {
+        DEBUG("Tracing builtin %p\n", op);
+
+        std::string fun_name = dyntrace_get_c_function_name(op);
+        int i = 0;
+        for (SEXP x = args; x != R_NilValue; x = CDR(args), ++i) {
+            SEXP v = CAR(x);
+            if (TYPEOF(v) == PROMSXP) {
+                if (PRVALUE(v) != R_UnboundValue) {
+                    v = PRVALUE(v);
+                } else {
+                    continue;
+                }
+            }
+
+            std::string param_name = std::to_string(i);
+            add_trace_val(BASE_PKG_NAME, fun_name, param_name, v);
+        }
+
+        if (result != R_UnboundValue) {
+            add_trace_val(BASE_PKG_NAME, fun_name, RETURN_PARAM_NAME, result);
+        }
+    }
+
+    void trace_closure_call(SEXP clo, SEXP rho, SEXP result) {
         DEBUG("Tracing %p\n", clo);
 
         auto pkg_key = envirs_.find(CLOENV(clo));
@@ -288,14 +312,21 @@ class TracerState {
             return;
         }
 
-        auto type = TYPEOF(op);
-
-        if (type != CLOSXP) {
-            // TODO add support for buildsxp
-            return;
+        switch (TYPEOF(op)) {
+        case CLOSXP:
+            trace_closure_call(op, rho, result);
+            break;
+#ifdef ENABLE_BUILTINS
+        case BUILTINSXP:
+            trace_builtin_call(op, args, rho, result);
+            break;
+#endif
+#ifdef ENABLE_SPECIALS
+        case SPECIALSXP:
+            trace_builtin_call(op, args, rho, result);
+            break;
+#endif
         }
-
-        add_trace(op, rho, result);
     }
 
     void context_entry(void* pointer) {

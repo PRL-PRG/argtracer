@@ -124,3 +124,11 @@ test_with_db("warning is OK", {
     # return, x, y
     expect_equal(sum(origins$fun == "f_warning"), 3L)
 })
+
+# there is a support for builtins and specialsxp, but
+# it will make everything crowl
+# test_with_db("test builtin", {
+#     ret <- trace_code(db, {
+#         class(1)
+#     })
+# })
