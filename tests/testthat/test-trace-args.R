@@ -4,6 +4,7 @@ test_with_db("test context jumps", {
     ret <- trace_code(db, {
         testpkg:::f_return(TRUE, 1L)
     })
+
     expect_equal(ret$status, 0L)
     expect_equal(ret$result, 2L)
     expect_equal(sxpdb::size_db(db), 3L)
@@ -40,14 +41,15 @@ test_that("ignored functions", {
 
     ret <- callr::r_copycat(
         function(db_path) {
-            db <- sxpdb::open_db(db_path)
+            db <- sxpdb::open_db(db_path, write = TRUE)
             ret <- argtracer::trace_code(db, code = {
                 library(tools)
             })
             sxpdb::close_db(db)
             ret
         },
-        list(db_path = db_path)
+        list(db_path = db_path),
+        show = TRUE
     )
 
     expect_equal(ret$status, 0L)
@@ -55,6 +57,7 @@ test_that("ignored functions", {
 
     db <- sxpdb::open_db(db_path)
     expect_equal(sxpdb::size_db(db), 0L)
+    sxpdb::close_db(db)
 })
 
 test_with_db("basic test", {
