@@ -51,11 +51,9 @@ test_trace_file <- function(file, environment = parent.frame()) {
     trace_file(file, db_path, environment = environment)
 }
 
-test_trace_code <- function(code) {
-    db_path <- tempfile(fileext = ".sxpdb")
-    cat("*** Temp DB path: ", db_path, "\n")
+test_trace_code <- function(code, environment = parent.frame()) {
     file <- tempfile()
     cat("*** Temp code: ", file, "\n")
-    writeLines(code, file)
-    trace_file(file, db_path)
+    writeLines(deparse(substitute(code)), file)
+    test_trace_file(file, environment = environment)
 }
