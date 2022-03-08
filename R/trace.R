@@ -13,7 +13,7 @@ trace_code <- function(db, code, quote = TRUE,
 #' @export
 #' @importFrom sxpdb open_db close_db
 trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environment = parent.frame()) {
-    db <- sxpdb::open_db(db_path, write_mode = TRUE, quiet = TRUE)
+    db <- sxpdb::open_db(db_path, mode = TRUE, quiet = TRUE)
 
     time <- c("elapsed" = NA)
     status <- NA

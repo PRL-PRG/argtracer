@@ -2,5 +2,6 @@
 
 export(trace_code)
 export(trace_file)
+importFrom(sxpdb,close_db)
 importFrom(sxpdb,open_db)
 useDynLib(argtracer, .registration = TRUE, .fixes = "C_")
