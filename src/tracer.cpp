@@ -15,7 +15,7 @@
 #include "util.h"
 
 typedef SEXP (*AddValOriginFun)(SEXP, SEXP, const char*, const char*,
-                                const char*);
+                                const char*, uint64_t);
 
 static AddValOriginFun add_val_origin = NULL;
 
@@ -122,6 +122,8 @@ class TracerState {
     std::unordered_set<SEXP> pending_;
     // whether to record or not
     bool recording_ = true;
+    // call_id
+    uint64_t call_id_ = 0;
 
     inline void add_trace_val(const std::string& pkg_name,
                               const std::string& fun_name,
@@ -131,7 +133,7 @@ class TracerState {
 
         if (recording_) {
             add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
-                           param_name.c_str());
+                           param_name.c_str(), call_id_);
         }
     }
 
@@ -194,6 +196,7 @@ class TracerState {
 
     void trace_builtin_call(SEXP op, SEXP args, SEXP rho, SEXP result) {
         DEBUG("Tracing builtin %p\n", op);
+        ++call_id_;
 
         std::string fun_name = dyntrace_get_c_function_name(op);
         int i = 0;
@@ -218,6 +221,7 @@ class TracerState {
 
     void trace_closure_call(SEXP clo, SEXP rho, SEXP result) {
         DEBUG("Tracing %p\n", clo);
+        ++call_id_;
 
         auto pkg_key = envirs_.find(CLOENV(clo));
         if (pkg_key == envirs_.end()) {
