@@ -200,7 +200,8 @@ class TracerState {
 
         std::string fun_name = dyntrace_get_c_function_name(op);
         int i = 0;
-        for (SEXP x = args; x != R_NilValue; x = CDR(args), ++i) {
+
+        for (SEXP x = args; x != R_NilValue; x = CDR(x), ++i) {
             SEXP v = CAR(x);
             if (TYPEOF(v) == PROMSXP) {
                 if (PRVALUE(v) != R_UnboundValue) {
