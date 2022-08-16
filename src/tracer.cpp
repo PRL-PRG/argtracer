@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -110,6 +112,8 @@ class TracerState {
   private:
     // the SEXP database
     SEXP db_;
+    // CSV with calls
+    std::ofstream& output_;
     // a depth of blacklisted functions
     int blacklist_stack_ = 0;
     // a call stack with both contexts and function calls
@@ -132,8 +136,16 @@ class TracerState {
               param_name.c_str());
 
         if (recording_) {
-            add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
-                           param_name.c_str(), call_id_);
+            SEXP val_id_sexp =
+                add_val_origin(db_, val, pkg_name.c_str(), fun_name.c_str(),
+                               param_name.c_str(), call_id_);
+            int val_id = -1;
+            if (val_id_sexp != R_NilValue) {
+                val_id = Rf_asInteger(val_id_sexp);
+            }
+
+            output_ << call_id_ << ",\"" << pkg_name << "\",\"" << fun_name
+                    << "\",\"" << param_name << "\"," << val_id << std::endl;
         }
     }
 
@@ -272,7 +284,7 @@ class TracerState {
     }
 
   public:
-    TracerState(SEXP db) : db_(db){};
+    TracerState(SEXP db, std::ofstream& output) : db_(db), output_(output){};
 
     void disable_recording() { recording_ = false; }
 
@@ -518,12 +530,14 @@ dyntracer_t* create_tracer() {
     return tracer;
 }
 
-SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
+SEXP trace_code(SEXP db, SEXP code, SEXP rho, SEXP output) {
     initialize_globals();
 
     dyntracer_t* tracer = create_tracer();
 
-    TracerState state(db);
+    std::ofstream output_stream;
+    output_stream.open(CHAR(STRING_ELT(output, 0)));
+    TracerState state(db, output_stream);
 
     char* no_recording = getenv("ARGTRACER_NO_RECORDING");
     if (no_recording != NULL) {
@@ -536,6 +550,8 @@ SEXP trace_code(SEXP db, SEXP code, SEXP rho) {
     dyntrace_enable();
     dyntrace_result_t result = dyntrace_trace_code(tracer, code, rho);
     dyntrace_disable();
+
+    output_stream.close();
 
     const char* names[] = {"status", "result", ""};
     SEXP ret = PROTECT(Rf_mkNamed(VECSXP, names));

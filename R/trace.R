@@ -1,5 +1,5 @@
 #' @export
-trace_code <- function(db, code, quote = TRUE,
+trace_code <- function(db, code, output_path, quote = TRUE,
                        environment = parent.frame()) {
     if (quote) {
         code <- substitute(code)
@@ -7,12 +7,15 @@ trace_code <- function(db, code, quote = TRUE,
 
     # sxpdb uses TRACE frag
     tracingState(on = FALSE)
-    invisible(.Call(C_trace_code, db, code, environment))
+    invisible(.Call(C_trace_code, db, code, environment, output_path))
 }
 
 #' @export
 #' @importFrom sxpdb open_db close_db
-trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environment = parent.frame()) {
+trace_file <- function(file,
+                       db_path = paste0(basename(file), ".sxpdb"),
+                       output_path = paste0(basename(file), ".callids"),
+                       environment = parent.frame()) {
     db <- sxpdb::open_db(db_path, mode = TRUE, quiet = TRUE)
 
     time <- c("elapsed" = NA)
@@ -24,7 +27,7 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environ
         {
             code <- parse(file = file)
             code <- as.call(c(`{`, code))
-            time <- system.time(ret <- trace_code(db, code, quote = FALSE, environment = environment))
+            time <- system.time(ret <- trace_code(db, code, output_path, quote = FALSE, environment = environment))
             status <- ret$status
             db_size <- sxpdb::size_db(db)
         },
@@ -47,8 +50,10 @@ trace_file <- function(file, db_path = paste0(basename(file), ".sxpdb"), environ
 
 test_trace_file <- function(file, environment = parent.frame()) {
     db_path <- tempfile(fileext = ".sxpdb")
+    output_path <- tempfile(fileext = ".callids")
     cat("*** Temp DB path: ", db_path, "\n")
-    trace_file(file, db_path, environment = environment)
+    cat("*** Temp callids path: ", output_path, "\n")
+    trace_file(file, db_path, output_path, environment = environment)
 }
 
 test_trace_code <- function(code, environment = parent.frame()) {
