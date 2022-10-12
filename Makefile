@@ -42,4 +42,4 @@ itest-docker:
         make -C /argtracer/tests/itest
 
 install: clean
-	$(BEAR) $(R) CMD INSTALL .
+	$(R) CMD INSTALL .
